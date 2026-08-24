@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Sequence
 
 from prefixcash.core.metrics import CacheMetrics, aggregate
 from prefixcash.core.pricing import cost
@@ -92,7 +92,8 @@ def render_md(report: Report) -> str:
     if t is not None:
         lines.append(
             f"| **TOTAL** | **{t.calls}** | **{t.input_tokens:,}** | **{t.cache_read_tokens:,}** "
-            f"| **{t.hit_rate:.1%}** | **{t.base_input_cost:,.2f}** | **{t.actual_input_cost:,.2f}** | **{t.saved_usd:,.2f}** |"
+            f"| **{t.hit_rate:.1%}** | **{t.base_input_cost:,.2f}** | **{t.actual_input_cost:,.2f}** "
+            f"| **{t.saved_usd:,.2f}** |"
         )
     lines.append("")
     return "\n".join(lines)

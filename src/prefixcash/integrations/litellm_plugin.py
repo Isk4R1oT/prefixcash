@@ -15,7 +15,8 @@ from __future__ import annotations
 
 import json
 import threading
-from typing import Any, Callable, Mapping
+from collections.abc import Callable, Mapping
+from typing import Any
 
 from prefixcash.core.metrics import CacheMetrics
 from prefixcash.core.parsers.base import ParsedUsage

@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass, field
-from datetime import datetime
-from typing import Iterable
+from datetime import UTC, datetime
 
 
 @dataclass
@@ -20,7 +20,7 @@ class CacheMetrics:
     session_id: str | None = None
     agent: str | None = None
     project: str | None = None
-    ts: datetime = field(default_factory=datetime.utcnow)
+    ts: datetime = field(default_factory=lambda: datetime.now(UTC))
 
     @property
     def miss_tokens(self) -> int:

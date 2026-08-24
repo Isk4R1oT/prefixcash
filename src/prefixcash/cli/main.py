@@ -73,7 +73,13 @@ def providers() -> None:
 
 
 @cli.command("import")
-@click.option("--litellm", "path", type=click.Path(exists=True, dir_okay=False), required=True, help="исходный JSONL (LiteLLM/OpenRouter/сырые записи)")
+@click.option(
+    "--litellm",
+    "path",
+    type=click.Path(exists=True, dir_okay=False),
+    required=True,
+    help="исходный JSONL (LiteLLM/OpenRouter/сырые записи)",
+)
 @click.option("--out", "out", type=click.Path(dir_okay=False), default="prefixcash.jsonl", show_default=True)
 def import_cmd(path: str, out: str) -> None:
     """Нормализует лог в JSONL prefixcash."""

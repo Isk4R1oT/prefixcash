@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Mapping
+from collections.abc import Mapping
 
 from prefixcash.core.metrics import CacheMetrics
 from prefixcash.core.parsers.base import ParsedUsage, UsageParser

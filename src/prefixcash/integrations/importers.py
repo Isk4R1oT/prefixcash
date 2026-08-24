@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Iterator, Mapping
 from datetime import datetime
 from pathlib import Path
-from typing import Iterator, Mapping
 
 from prefixcash.core.metrics import CacheMetrics
 from prefixcash.core.parsers import to_metrics

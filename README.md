@@ -11,21 +11,22 @@
 
 ## Статус
 
-**Design** — MVP в разработке (P0: измерение).
+**P0 (measure) готов** — парсеры OpenAI/DeepSeek, `CacheMetrics`, CLI, LiteLLM callback, тесты. **P1 (diagnose)** — следующий этап.
 
-## Quick start (план)
+## Quick start (из репозитория)
 
 ```bash
-pip install prefixcash
-prefixcash init
-prefixcash monitor      # TUI: hit rate по провайдерам
-prefixcash diagnose     # что мешает и варианты фикса
-prefixcash report       # отчёт «$ сэкономлено» (MD/HTML)
+uv sync --extra dev
+uv run prefixcash providers                            # таблица цен/TTL
+uv run prefixcash report --file examples/sample.jsonl  # отчёт «$ сэкономлено»
+uv run prefixcash monitor --file examples/sample.jsonl
 ```
+
+(PyPI-релиз — на этапе P2.)
 
 ## Roadmap
 
-- **P0:** парсеры OpenAI/DeepSeek, `CacheMetrics`, CLI `monitor`/`report`, LiteLLM callback.
+- **P0 (готов):** парсеры OpenAI/DeepSeek, `CacheMetrics`, CLI `monitor`/`report`/`providers`/`import`, LiteLLM callback, тесты.
 - **P1:** парсеры Anthropic/Gemini/OpenRouter, `diagnose` (LCP + дифф + детект динамики), rules engine (варианты фиксов).
 - **P2:** keep-alive вормер, assembly-lint (варианты), эксперименты в staging, бенчмарк-репорт-карды, релиз.
 

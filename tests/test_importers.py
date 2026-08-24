@@ -9,7 +9,11 @@ def test_import_litellm_style(tmp_path):
         json.dumps(
             {
                 "model": "gpt-4o",
-                "usage": {"prompt_tokens": 100, "completion_tokens": 10, "prompt_tokens_details": {"cached_tokens": 60}},
+                "usage": {
+                    "prompt_tokens": 100,
+                    "completion_tokens": 10,
+                    "prompt_tokens_details": {"cached_tokens": 60},
+                },
                 "metadata": {"session_id": "s1", "agent": "sales"},
             }
         )
