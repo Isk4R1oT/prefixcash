@@ -22,6 +22,7 @@ from prefixcash.core.metrics import CacheMetrics
 from prefixcash.core.parsers.base import ParsedUsage
 from prefixcash.core.parsers.deepseek import DeepSeekUsageParser
 from prefixcash.core.parsers.openai import OpenAIUsageParser
+from prefixcash.diagnose.calls import prompt_from_messages
 
 MetricSink = Callable[[CacheMetrics], None]
 
@@ -63,7 +64,7 @@ def _parse(provider: str, usage: Mapping) -> ParsedUsage:
     return OpenAIUsageParser().parse(usage)
 
 
-def _json_record(m: CacheMetrics) -> dict:
+def _json_record(m: CacheMetrics, prompt: str | None = None) -> dict:
     return {
         "provider": m.provider,
         "model": m.model,
@@ -73,6 +74,7 @@ def _json_record(m: CacheMetrics) -> dict:
             "cache_write_tokens": m.cache_write_tokens,
             "output_tokens": m.output_tokens,
         },
+        "prompt": prompt,
         "session_id": m.session_id,
         "agent": m.agent,
         "project": m.project,
@@ -105,6 +107,7 @@ class PrefixCashCallback:
         params = kwargs.get("litellm_params") or {}
         meta = params.get("metadata") or {}
         parsed = _parse(provider, usage)
+        prompt = prompt_from_messages(kwargs.get("messages"))
         metrics = CacheMetrics(
             provider=provider.lower(),
             model=_model_of(kwargs, response_obj),
@@ -120,7 +123,7 @@ class PrefixCashCallback:
             self.metrics.append(metrics)
             if self._file:
                 with open(self._file, "a", encoding="utf-8") as fh:
-                    fh.write(json.dumps(_json_record(metrics), ensure_ascii=False) + "\n")
+                    fh.write(json.dumps(_json_record(metrics, prompt=prompt), ensure_ascii=False) + "\n")
         if self._sink:
             self._sink(metrics)
 

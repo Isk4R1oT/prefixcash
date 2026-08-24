@@ -5,13 +5,19 @@ from __future__ import annotations
 from collections.abc import Mapping
 
 from prefixcash.core.metrics import CacheMetrics
+from prefixcash.core.parsers.anthropic import AnthropicUsageParser
 from prefixcash.core.parsers.base import ParsedUsage, UsageParser
 from prefixcash.core.parsers.deepseek import DeepSeekUsageParser
+from prefixcash.core.parsers.gemini import GeminiUsageParser
 from prefixcash.core.parsers.openai import OpenAIUsageParser
+from prefixcash.core.parsers.openrouter import OpenRouterUsageParser
 
 PARSERS: dict[str, UsageParser] = {
     "openai": OpenAIUsageParser(),
+    "anthropic": AnthropicUsageParser(),
     "deepseek": DeepSeekUsageParser(),
+    "gemini": GeminiUsageParser(),
+    "openrouter": OpenRouterUsageParser(),
 }
 
 
@@ -42,16 +48,23 @@ def to_metrics(
 ) -> CacheMetrics:
     """Фабрика CacheMetrics из usage-пейлоада провайдера.
 
-    P0: для провайдеров без зарегистрированного парсера (anthropic/gemini — P1)
-    usage в openai-нормализованной форме парсится openai-парсером; имя провайдера
-    сохраняется для атрибуции и цен.
+    Умный диспатч: провайдер-специфичные поля приоритетны (raw payload), всё
+    остальное — в т.ч. LiteLLM-нормализованный usage — парсится в openai-стиле.
+    Имя провайдера всегда сохраняется для атрибуции и цен.
     """
-    if provider.lower() in PARSERS:
-        parsed = parse_usage(provider, usage)
+    provider = provider.lower()
+    if "prompt_cache_hit_tokens" in usage and provider == "deepseek":
+        parsed = DeepSeekUsageParser().parse(usage)
+    elif "usageMetadata" in usage and provider == "gemini":
+        parsed = GeminiUsageParser().parse(usage)
+    elif "cache_read_input_tokens" in usage and provider == "anthropic":
+        parsed = AnthropicUsageParser().parse(usage)
+    elif "native_tokens_prompt_details" in usage and provider == "openrouter":
+        parsed = OpenRouterUsageParser().parse(usage)
     else:
         parsed = OpenAIUsageParser().parse(usage)
     return CacheMetrics(
-        provider=provider.lower(),
+        provider=provider,
         model=model,
         input_tokens=parsed.input_tokens,
         cache_read_tokens=parsed.cache_read_tokens,

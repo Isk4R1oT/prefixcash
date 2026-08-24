@@ -1,4 +1,4 @@
-"""CLI prefixcash (P0): report / monitor / providers / import."""
+"""CLI prefixcash: report / monitor / diagnose / providers / import (P0+P1)."""
 
 from __future__ import annotations
 
@@ -12,7 +12,8 @@ from prefixcash import __version__
 from prefixcash.cli.monitor import metrics_table
 from prefixcash.cli.report import build_report, render_md, report_to_dict
 from prefixcash.core.pricing import PRICING
-from prefixcash.integrations.importers import iter_jsonl
+from prefixcash.diagnose.engine import analyze_calls
+from prefixcash.integrations.importers import iter_calls, iter_jsonl
 
 console = Console()
 
@@ -46,6 +47,41 @@ def monitor(path: str) -> None:
     if not metrics:
         raise click.ClickException("в логе нет записей с usage")
     console.print(metrics_table(metrics))
+
+
+@cli.command()
+@click.option(
+    "--file",
+    "path",
+    type=click.Path(exists=True, dir_okay=False),
+    required=True,
+    help="JSONL-лог вызовов (нужны prompt/messages)",
+)
+@click.option("--session", "session", default=None, help="фильтр по session_id")
+@click.option("--json", "as_json", is_flag=True, help="вывод в JSON")
+def diagnose(path: str, session: str | None, as_json: bool) -> None:
+    """Что ломает префикс-кеш ВНУТРИ сессий и как это чинить (advisory, D18)."""
+    calls = [c for c in iter_calls(path) if session is None or c.metrics.session_id == session]
+    findings = analyze_calls(calls)
+    total = sum(len(v) for v in findings.values())
+    if as_json:
+        console.print_json(json.dumps(_findings_to_dict(findings), ensure_ascii=False))
+        return
+    if total == 0:
+        console.print("Поломок префикса не найдено (или в логе нет prompt/messages).")
+        return
+    for sid, fs in sorted(findings.items()):
+        console.print(f"[bold]{sid}[/bold] — {len(fs)} находок")
+        for f in fs:
+            prev = f.prev_call_index if f.prev_call_index is not None else "?"
+            console.print(f"  call {prev} -> {f.call_index}: общий префикс {f.shared_prefix_words} слов")
+            if f.break_words:
+                console.print(f"    слова после разрыва: {' '.join(f.break_words)}")
+            for c in f.causes:
+                console.print(f"    • [red]{c.kind}[/red]: {c.detail}")
+            for v in f.fix_variants:
+                console.print(f"    → фикс: {v}")
+    console.print(f"\nИтого: {total} поломок в {len(findings)} сессиях")
 
 
 @cli.command()
@@ -105,4 +141,22 @@ def _record(m) -> dict:
         "agent": m.agent,
         "project": m.project,
         "ts": m.ts.isoformat(),
+    }
+
+
+def _findings_to_dict(findings: dict[str, list]) -> dict:
+    """Сериализует находки diagnose в JSON."""
+    return {
+        sid: [
+            {
+                "call_index": f.call_index,
+                "prev_call_index": f.prev_call_index,
+                "shared_prefix_words": f.shared_prefix_words,
+                "break_words": f.break_words,
+                "causes": [{"kind": c.kind, "detail": c.detail} for c in f.causes],
+                "fix_variants": f.fix_variants,
+            }
+            for f in fs
+        ]
+        for sid, fs in findings.items()
     }

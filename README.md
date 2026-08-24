@@ -17,17 +17,18 @@
 
 ```bash
 uv sync --extra dev
-uv run prefixcash providers                            # таблица цен/TTL
-uv run prefixcash report --file examples/sample.jsonl  # отчёт «$ сэкономлено»
+uv run prefixcash providers                             # таблица цен/TTL
+uv run prefixcash report --file examples/sample.jsonl   # отчёт «$ сэкономлено»
 uv run prefixcash monitor --file examples/sample.jsonl
+uv run prefixcash diagnose --file examples/diagnose.jsonl  # что ломает префикс внутри сессий
 ```
 
-(PyPI-релиз — на этапе P2.)
+(PyPI-релиз — на этапе P2. Методология измерений — [METHODOLOGY.md](METHODOLOGY.md).)
 
 ## Roadmap
 
 - **P0 (готов):** парсеры OpenAI/DeepSeek, `CacheMetrics`, CLI `monitor`/`report`/`providers`/`import`, LiteLLM callback, тесты.
-- **P1:** парсеры Anthropic/Gemini/OpenRouter, `diagnose` (LCP + дифф + детект динамики), rules engine (варианты фиксов).
+- **P1 (в работе):** парсеры Anthropic/Gemini/OpenRouter; `diagnose` — внутрисессионный детект поломки префикса (D21); rules engine (advisory-варианты); Textual TUI — остаток.
 - **P2:** keep-alive вормер, assembly-lint (варианты), эксперименты в staging, бенчмарк-репорт-карды, релиз.
 
 ## Лицензия
