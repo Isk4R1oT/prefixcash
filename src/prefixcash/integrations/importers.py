@@ -1,0 +1,80 @@
+"""Импорт логов в CacheMetrics: JSONL (LiteLLM / OpenRouter / сырые записи / формат prefixcash)."""
+
+from __future__ import annotations
+
+import json
+from datetime import datetime
+from pathlib import Path
+from typing import Iterator, Mapping
+
+from prefixcash.core.metrics import CacheMetrics
+from prefixcash.core.parsers import to_metrics
+
+
+def _provider_of_record(record: Mapping) -> str:
+    p = record.get("provider")
+    if p:
+        return str(p)
+    llm_params = record.get("litellm_params") or {}
+    p = llm_params.get("custom_llm_provider")
+    if p:
+        return str(p)
+    model = str(record.get("model") or "")
+    if "/" in model:
+        return model.split("/", 1)[0]
+    return "openai"
+
+
+def _model_of_record(record: Mapping) -> str:
+    model = str(record.get("model") or "")
+    return model.split("/", 1)[1] if "/" in model else model
+
+
+def _ts_of_record(record: Mapping) -> datetime | None:
+    ts = record.get("ts")
+    if not ts:
+        return None
+    try:
+        return datetime.fromisoformat(str(ts))
+    except ValueError:
+        return None
+
+
+def iter_jsonl(path: str | Path) -> Iterator[CacheMetrics]:
+    """Читает JSONL: по строке — запись с usage (провайдерский ИЛИ нормализованный формат)."""
+    with open(path, encoding="utf-8") as fh:
+        for line in fh:
+            line = line.strip()
+            if not line:
+                continue
+            record = json.loads(line)
+            usage = record.get("usage")
+            if not usage:
+                continue
+            if "input_tokens" in usage:
+                # наш нормализованный формат (после `prefixcash import`)
+                kw: dict = {
+                    "provider": str(record.get("provider") or "unknown"),
+                    "model": str(record.get("model") or ""),
+                    "input_tokens": int(usage.get("input_tokens", 0) or 0),
+                    "cache_read_tokens": int(usage.get("cache_read_tokens", 0) or 0),
+                    "cache_write_tokens": int(usage.get("cache_write_tokens", 0) or 0),
+                    "output_tokens": int(usage.get("output_tokens", 0) or 0),
+                    "session_id": record.get("session_id"),
+                    "agent": record.get("agent"),
+                    "project": record.get("project"),
+                }
+                ts = _ts_of_record(record)
+                if ts is not None:
+                    kw["ts"] = ts
+                yield CacheMetrics(**kw)
+                continue
+            meta = record.get("metadata") or {}
+            yield to_metrics(
+                _provider_of_record(record),
+                _model_of_record(record),
+                usage,
+                session_id=meta.get("session_id") or record.get("session_id"),
+                agent=meta.get("agent") or record.get("agent"),
+                project=meta.get("project") or record.get("project"),
+            )

@@ -1,0 +1,10 @@
+{
+  "usage": {
+    "prompt_tokens": 1000,
+    "completion_tokens": 150,
+    "total_tokens": 1150,
+    "prompt_tokens_details": {"cached_tokens": 640, "audio_tokens": 0}
+  },
+  "model": "gpt-4o",
+  "provider": "openai"
+}
