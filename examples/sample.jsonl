@@ -2,6 +2,6 @@
 {"model": "gpt-4o", "usage": {"prompt_tokens": 15000, "completion_tokens": 250, "prompt_tokens_details": {"cached_tokens": 12000}}, "metadata": {"agent": "sales", "session_id": "s1"}}
 {"model": "gpt-4o", "usage": {"prompt_tokens": 14000, "completion_tokens": 280, "prompt_tokens_details": {"cached_tokens": 0}}, "metadata": {"agent": "support", "session_id": "s2"}}
 {"model": "gpt-4o", "usage": {"prompt_tokens": 16000, "completion_tokens": 220, "prompt_tokens_details": {"cached_tokens": 14000}}, "metadata": {"agent": "support", "session_id": "s2"}}
-{"model": "deepseek-chat", "usage": {"prompt_tokens": 8000, "completion_tokens": 200, "prompt_cache_hit_tokens": 7600}, "metadata": {"agent": "sales", "session_id": "s3"}}
-{"model": "deepseek-chat", "usage": {"prompt_tokens": 9000, "completion_tokens": 180, "prompt_cache_hit_tokens": 8700}, "metadata": {"agent": "sales", "session_id": "s3"}}
+{"provider": "deepseek", "model": "deepseek-chat", "usage": {"prompt_tokens": 8000, "completion_tokens": 200, "prompt_cache_hit_tokens": 7600}, "metadata": {"agent": "sales", "session_id": "s3"}}
+{"provider": "deepseek", "model": "deepseek-chat", "usage": {"prompt_tokens": 9000, "completion_tokens": 180, "prompt_cache_hit_tokens": 8700}, "metadata": {"agent": "sales", "session_id": "s3"}}
 {"model": "gpt-4o-mini", "usage": {"prompt_tokens": 5000, "completion_tokens": 100, "prompt_tokens_details": {"cached_tokens": 4000}}, "metadata": {"agent": "research", "project": "demo"}}

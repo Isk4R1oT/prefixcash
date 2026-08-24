@@ -11,6 +11,25 @@ from prefixcash.core.metrics import CacheMetrics
 from prefixcash.core.parsers import to_metrics
 
 
+_MODEL_PREFIX_PROVIDERS = (
+    ("deepseek", "deepseek"),
+    ("gpt", "openai"),
+    ("o1", "openai"),
+    ("o3", "openai"),
+    ("o4", "openai"),
+    ("claude", "anthropic"),
+    ("gemini", "gemini"),
+)
+
+
+def _provider_from_model(model: str) -> str | None:
+    low = model.lower()
+    for prefix, provider in _MODEL_PREFIX_PROVIDERS:
+        if low.startswith(prefix):
+            return provider
+    return None
+
+
 def _provider_of_record(record: Mapping) -> str:
     p = record.get("provider")
     if p:
@@ -22,6 +41,9 @@ def _provider_of_record(record: Mapping) -> str:
     model = str(record.get("model") or "")
     if "/" in model:
         return model.split("/", 1)[0]
+    inferred = _provider_from_model(model)
+    if inferred is not None:
+        return inferred
     return "openai"
 
 
