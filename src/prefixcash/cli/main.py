@@ -12,7 +12,10 @@ from prefixcash import __version__
 from prefixcash.cli.monitor import metrics_table
 from prefixcash.cli.report import build_report, render_md, report_to_dict
 from prefixcash.core.pricing import PRICING
-from prefixcash.diagnose.engine import analyze_calls
+from prefixcash.diagnose.assembly import lint
+from prefixcash.diagnose.engine import analyze_calls, group_by_session
+from prefixcash.diagnose.heatmap import build_heatmap, render_heatmap_markup
+from prefixcash.diagnose.rules import analyze_session
 from prefixcash.integrations.importers import iter_calls, iter_jsonl
 
 console = Console()
@@ -60,18 +63,21 @@ def monitor(path: str) -> None:
 @click.option("--session", "session", default=None, help="фильтр по session_id")
 @click.option("--json", "as_json", is_flag=True, help="вывод в JSON")
 def diagnose(path: str, session: str | None, as_json: bool) -> None:
-    """Что ломает префикс-кеш ВНУТРИ сессий и как это чинить (advisory, D18)."""
+    """Что ломает префикс-кеш внутри сессий: находки + тепловая карта + фиксы (advisory, D18)."""
     calls = [c for c in iter_calls(path) if session is None or c.metrics.session_id == session]
-    findings = analyze_calls(calls)
-    total = sum(len(v) for v in findings.values())
+    sessions = group_by_session(calls)
     if as_json:
-        console.print_json(json.dumps(_findings_to_dict(findings), ensure_ascii=False))
+        console.print_json(json.dumps(_findings_to_dict(analyze_calls(calls)), ensure_ascii=False))
         return
-    if total == 0:
-        console.print("Поломок префикса не найдено (или в логе нет prompt/messages).")
+    if not sessions:
+        console.print("В логе нет записей с usage.")
         return
-    for sid, fs in sorted(findings.items()):
-        console.print(f"[bold]{sid}[/bold] — {len(fs)} находок")
+    total = 0
+    for sid, group in sorted(sessions.items()):
+        fs = analyze_session(sid, group)
+        total += len(fs)
+        hm = build_heatmap(sid, group)
+        console.print(f"[bold]{sid}[/bold] — {len(fs)} находок, стабильность префикса {hm.hot_ratio:.0%}")
         for f in fs:
             prev = f.prev_call_index if f.prev_call_index is not None else "?"
             console.print(f"  call {prev} -> {f.call_index}: общий префикс {f.shared_prefix_words} слов")
@@ -81,7 +87,12 @@ def diagnose(path: str, session: str | None, as_json: bool) -> None:
                 console.print(f"    • [red]{c.kind}[/red]: {c.detail}")
             for v in f.fix_variants:
                 console.print(f"    → фикс: {v}")
-    console.print(f"\nИтого: {total} поломок в {len(findings)} сессиях")
+        if hm.cells:
+            console.print("  тепловая карта (цвет = стабильность префикса):")
+            console.print("  " + render_heatmap_markup(hm, limit=24))
+            for s in lint(hm)[:4]:
+                console.print(f"    [red]{s.position}: {s.word}[/] — {s.suggestion}")
+    console.print(f"\nИтого: {total} поломок в {len(sessions)} сессиях")
 
 
 @cli.command()
@@ -106,6 +117,18 @@ def providers() -> None:
             "yes" if entry.verified else "no",
         )
     console.print(table)
+
+
+@cli.command()
+@click.option("--file", "path", type=click.Path(exists=True, dir_okay=False), required=True, help="JSONL-лог вызовов")
+def tui(path: str) -> None:
+    """Интерактивный TUI: статистика + тепловая карта префиксов (j/k — сессии)."""
+    from prefixcash.cli.tui import PrefixCashTui
+
+    calls = list(iter_calls(path))
+    if not calls:
+        raise click.ClickException("в логе нет записей с usage")
+    PrefixCashTui(calls).run()
 
 
 @cli.command("import")
