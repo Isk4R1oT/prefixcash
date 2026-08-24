@@ -16,21 +16,7 @@ from prefixcash.core.pricing import cost
 from prefixcash.diagnose.assembly import AssemblySuggestion, lint
 from prefixcash.diagnose.calls import CallRecord
 from prefixcash.diagnose.engine import group_by_session
-from prefixcash.diagnose.heatmap import PromptHeatmap, build_heatmap
-
-_COLORS = {"hot": "green", "warm": "yellow", "cold": "red"}
-
-
-def render_heatmap_markup(hm: PromptHeatmap, limit: int | None = None) -> str:
-    """Тепловая карта как rich-разметка (цвет по стабильности)."""
-    if not hm.cells:
-        return "(нет промптов в сессии)"
-    cells = hm.cells[:limit] if limit else hm.cells
-    parts = [f"[{_COLORS[c.kind]}]{c.word}[/]" for c in cells]
-    text = " ".join(parts)
-    if limit and len(hm.cells) > limit:
-        text += f" … ещё {len(hm.cells) - limit} слов"
-    return text
+from prefixcash.diagnose.heatmap import build_heatmap, render_heatmap_markup
 
 
 class PrefixCashTui(App):
@@ -103,7 +89,7 @@ class PrefixCashTui(App):
             return "фикс-предложения: стабильный префикс, поломок нет"
         lines = [f"фикс-предложения ({len(fixes)}):"]
         for f in fixes[:6]:
-            lines.append(f"  [{_COLORS['cold']}]{f.position}: {f.word}[/] — {f.suggestion}")
+            lines.append(f"  [red]{f.position}: {f.word}[/] — {f.suggestion}")
         return "\n".join(lines)
 
     # --- управление ---

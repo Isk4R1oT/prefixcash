@@ -83,8 +83,21 @@ def build_heatmap(session_id: str, calls: list[CallRecord]) -> PromptHeatmap:
 
 
 _MARKS = {"hot": "█", "warm": "▒", "cold": "░"}
+_COLORS = {"hot": "green", "warm": "yellow", "cold": "red"}
 
 
 def heatmap_text(hm: PromptHeatmap) -> str:
     """Тепловая карта как плоский текст с маркерами (для тестов/логов)."""
     return " ".join(f"{_MARKS[c.kind]}{c.word}" for c in hm.cells)
+
+
+def render_heatmap_markup(hm: PromptHeatmap, limit: int | None = None) -> str:
+    """Тепловая карта как rich-разметка (цвет по стабильности)."""
+    if not hm.cells:
+        return "(нет промптов в сессии)"
+    cells = hm.cells[:limit] if limit else hm.cells
+    parts = [f"[{_COLORS[c.kind]}]{c.word}[/]" for c in cells]
+    text = " ".join(parts)
+    if limit and len(hm.cells) > limit:
+        text += f" … ещё {len(hm.cells) - limit} слов"
+    return text
