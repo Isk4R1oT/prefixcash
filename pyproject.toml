@@ -24,6 +24,7 @@ dependencies = [
 
 [project.optional-dependencies]
 litellm = ["litellm>=1.40"]
+examples = ["langchain-openai>=0.2"]
 dev = ["pytest>=8.0", "pytest-cov>=5.0", "ruff>=0.5", "mypy>=1.10"]
 
 [project.scripts]

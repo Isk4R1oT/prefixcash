@@ -124,6 +124,7 @@ run automatically.
   many calls were priced (`priced_calls`).
 - Failed calls carry no `usage` and are excluded (P0).
 - Batch, promotion and enterprise discounts are not modelled.
+- Experiments (P2/D24) replay variants sequentially on the same provider cache: order effects between variants are possible; interpret small hit-rate deltas with care.
 
 ## 12. Changelog
 

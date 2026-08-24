@@ -32,6 +32,17 @@ uv run prefixcash tui --file examples/diagnose.jsonl       # интеракти�
 - **P1 (в работе):** парсеры Anthropic/Gemini/OpenRouter; `diagnose` — внутрисессионный детект поломки префикса (D21); rules engine (advisory-варианты); Textual TUI — остаток.
 - **P2 (в работе):** тепловая карта префикса + фикс-предложения (D23); батч-порядок по префиксу вместо keep-alive (D22); кеш-осведомлённая маршрутизация; Textual TUI; эксперименты в staging; бенчмарк-репорт-карды; PyPI/GitHub-релиз.
 
+## Эксперименты в staging (experiment.py)
+
+Проверка фикс-вариантов на выборке: hit rate + качество (LLM-as-judge) — до прода (advisory, D18).
+
+```bash
+export DEEPSEEK_API_KEY=sk-...        # или cp examples/.env.example examples/.env
+uv sync --extra dev --extra examples
+uv run python -m examples.sales_agent            # агент на LangChain (один ход)
+uv run python -m examples.run_experiment         # broken vs fixed: hit rate + качество
+```
+
 ## Лицензия
 
 MIT — см. [LICENSE](LICENSE).
