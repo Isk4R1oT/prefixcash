@@ -10,7 +10,6 @@ from pathlib import Path
 from prefixcash.core.metrics import CacheMetrics
 from prefixcash.core.parsers import to_metrics
 
-
 _MODEL_PREFIX_PROVIDERS = (
     ("deepseek", "deepseek"),
     ("gpt", "openai"),

@@ -40,8 +40,16 @@ def to_metrics(
     agent: str | None = None,
     project: str | None = None,
 ) -> CacheMetrics:
-    """Фабрика CacheMetrics из usage-пейлоада провайдера."""
-    parsed = parse_usage(provider, usage)
+    """Фабрика CacheMetrics из usage-пейлоада провайдера.
+
+    P0: для провайдеров без зарегистрированного парсера (anthropic/gemini — P1)
+    usage в openai-нормализованной форме парсится openai-парсером; имя провайдера
+    сохраняется для атрибуции и цен.
+    """
+    if provider.lower() in PARSERS:
+        parsed = parse_usage(provider, usage)
+    else:
+        parsed = OpenAIUsageParser().parse(usage)
     return CacheMetrics(
         provider=provider.lower(),
         model=model,

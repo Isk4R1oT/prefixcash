@@ -49,13 +49,15 @@ def test_import_normalized_format(tmp_path):
 
 def test_import_infers_provider_from_model(tmp_path):
     log = tmp_path / "m.jsonl"
-    log.write_text(
-        json.dumps({"model": "deepseek-chat", "usage": {"prompt_tokens": 100, "completion_tokens": 5, "prompt_cache_hit_tokens": 90}})
-        + "\n"
-        + json.dumps({"model": "claude-sonnet-4-5", "usage": {"prompt_tokens": 50, "completion_tokens": 3, "prompt_tokens_details": {"cached_tokens": 40}}})
-        + "\n",
-        encoding="utf-8",
-    )
+    deepseek = {
+        "model": "deepseek-chat",
+        "usage": {"prompt_tokens": 100, "completion_tokens": 5, "prompt_cache_hit_tokens": 90},
+    }
+    claude = {
+        "model": "claude-sonnet-4-5",
+        "usage": {"prompt_tokens": 50, "completion_tokens": 3, "prompt_tokens_details": {"cached_tokens": 40}},
+    }
+    log.write_text("\n".join(json.dumps(r) for r in [deepseek, claude]) + "\n", encoding="utf-8")
     ms = list(iter_jsonl(log))
     assert ms[0].provider == "deepseek"
     assert ms[0].hit_rate == 0.9
