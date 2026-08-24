@@ -1,18 +1,19 @@
-"""experiment.py — проверка фикс-вариантов на выборке в staging (D24).
+"""experiment.py — проверка фикс-вариантов на выборке в staging (D24/D25).
 
 Протокол (advisory, D18):
 1. Берём выборку сессий (staging-трафик): system_prompt + последовательности user-сообщений.
 2. Для каждого варианта сборки промпта прогоняем реплей через реального провайдера
    и собираем usage -> hit rate и saved USD (через ценовые таблицы prefixcash).
-3. Качество: LLM-as-judge попарно (baseline vs variant ответы) на тех же вопросах.
-4. Вердикт: APPLY / DON'T APPLY — применяет человек.
+3. Вердикт по экономике кеша: улучшился ли hit rate и сколько $ экономии на выборке.
+
+Качество фиксов НЕ оцениваем (D25): у пользователя свой eval. Наша задача —
+показать, ГДЕ ломается кеш и СКОЛЬКО будет сэкономлено при правильной сборке.
 
 Клиент-агностично: нужен любой объект с `complete(messages) -> (text, usage)`.
 """
 
 from __future__ import annotations
 
-import re
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from typing import Protocol
@@ -22,6 +23,7 @@ from prefixcash.core.parsers import parse_usage
 from prefixcash.core.pricing import cost
 
 DEFAULT_VARIANTS = ("baseline", "fixed")
+HIT_IMPROVEMENT_THRESHOLD = 0.05
 
 
 class LLMClient(Protocol):
@@ -100,32 +102,25 @@ class VariantResult:
 
 
 @dataclass
-class QualityVerdict:
-    """Результат LLM-as-judge по парам (baseline, variant)."""
-
-    original_better: int = 0
-    variant_better: int = 0
-    ties: int = 0
-
-    @property
-    def total(self) -> int:
-        return self.original_better + self.variant_better + self.ties
-
-    @property
-    def variant_not_worse(self) -> bool:
-        """Качество варианта не хуже: вариант лучше или равен чаще, чем хуже."""
-        return self.variant_better + self.ties >= self.original_better
-
-
-@dataclass
 class ExperimentReport:
-    """Итог эксперимента: hit rate, деньги и качество по вариантам."""
+    """Итог эксперимента: hit rate и экономия по вариантам (D25: без оценки качества)."""
 
     session_count: int
     baseline: VariantResult
     variants: list[VariantResult]
-    quality: QualityVerdict
     verdict: str
+
+    @property
+    def best_variant(self) -> VariantResult:
+        return max(self.variants, key=lambda v: v.hit_rate) if self.variants else self.baseline
+
+    @property
+    def hit_rate_delta(self) -> float:
+        return self.best_variant.hit_rate - self.baseline.hit_rate
+
+    @property
+    def saved_delta_usd(self) -> float:
+        return self.best_variant.saved_usd - self.baseline.saved_usd
 
     def render_md(self) -> str:
         header = "| variant | calls | input | hits | hit % | base $ | actual $ | saved $ |"
@@ -136,33 +131,11 @@ class ExperimentReport:
                 f"| {v.name} | {len(v.calls)} | {v.inputs:,} | {v.hits:,} | {v.hit_rate:.1%} "
                 f"| {v.base_input_cost:.4f} | {v.actual_input_cost:.4f} | {v.saved_usd:.4f} |"
             )
-        q = self.quality
         lines.append("")
-        lines.append(
-            f"Качество (LLM-as-judge, {q.total} пар): оригинал лучше {q.original_better}, "
-            f"вариант лучше {q.variant_better}, равны {q.ties}"
-        )
+        lines.append(f"Экономия на выборке при применении фикса: ${self.saved_delta_usd:.4f}")
         lines.append("")
         lines.append(f"**Вердикт: {self.verdict}**")
         return "\n".join(lines)
-
-
-_JUDGE_PROMPT = (
-    "Ты — судья качества ответов ассистента. Тебе дадут вопрос и два ответа. "
-    "Оцени, какой ответ лучше (точнее, полезнее, корректнее) или они равнозначны.\n"
-    'Ответь строго одним JSON: {"choice": "first" | "second" | "tie"}'
-)
-
-
-def judge_pairwise(judge: LLMClient, query: str, first: str, second: str) -> str:
-    """Попарное сравнение: 'first' | 'second' | 'tie'."""
-    messages = [
-        {"role": "system", "content": _JUDGE_PROMPT},
-        {"role": "user", "content": f"Вопрос: {query}\n\nОтвет 1: {first}\n\nОтвет 2: {second}"},
-    ]
-    text, _ = judge.complete(messages)
-    m = re.search(r'"(first|second|tie)"', text)
-    return m.group(1) if m else "tie"
 
 
 def _replay(
@@ -171,14 +144,9 @@ def _replay(
     variant: str,
     client: LLMClient,
     max_turns: int | None,
-) -> tuple[list[CallResult], dict[tuple[str, int], str], dict[tuple[str, int], str]]:
-    """Реплей сессий с данным вариантом системного промпта.
-
-    Возвращает (вызовы, ответы по ключу (session, turn), вопросы по ключу).
-    """
+) -> list[CallResult]:
+    """Реплей сессий с данным вариантом системного промпта."""
     results: list[CallResult] = []
-    outputs: dict[tuple[str, int], str] = {}
-    queries: dict[tuple[str, int], str] = {}
     for case in cases:
         system = prompt_for(variant, case.session_id)
         messages: list[dict] = [{"role": "system", "content": system}]
@@ -196,11 +164,9 @@ def _replay(
                     cache_hit_tokens=parsed.cache_read_tokens,
                 )
             )
-            outputs[(case.session_id, turn)] = text
-            queries[(case.session_id, turn)] = user_text
             if max_turns is not None and turn >= max_turns:
                 break
-    return results, outputs, queries
+    return results
 
 
 def run_experiment(
@@ -210,54 +176,36 @@ def run_experiment(
     prompt_for: Callable[[str, str], str],
     variants: Sequence[str] = DEFAULT_VARIANTS,
     max_turns: int | None = None,
-    judge: LLMClient | None = None,
 ) -> ExperimentReport:
-    """Прогоняет эксперимент: реплей по вариантам + LLM-as-judge + вердикт (advisory)."""
-    variant_results: dict[str, VariantResult] = {}
-    outputs: dict[str, dict[tuple[str, int], str]] = {}
-    queries: dict[str, dict[tuple[str, int], str]] = {}
+    """Прогоняет эксперимент: реплей по вариантам + вердикт по экономике кеша.
+
+    Качество фиксов оценивает пользователь своим eval'ом (D25) — здесь только
+    кеш-экономика: где ломается и сколько $ сэкономит правильная сборка.
+    """
+    results: dict[str, VariantResult] = {}
     for variant in variants:
-        calls, outs, ques = _replay(cases, prompt_for, variant, client, max_turns)
-        variant_results[variant] = VariantResult(
+        calls = _replay(cases, prompt_for, variant, client, max_turns)
+        results[variant] = VariantResult(
             variant,
             calls,
             provider=cases[0].provider if cases else "deepseek",
             model=cases[0].model if cases else "deepseek-chat",
         )
-        outputs[variant] = outs
-        queries[variant] = ques
 
-    quality = QualityVerdict()
-    if judge is not None and len(variants) >= 2:
-        base, alt = variants[0], variants[1]
-        for key in outputs[base]:
-            if key not in outputs[alt]:
-                continue
-            choice = judge_pairwise(judge, queries[base][key], outputs[base][key], outputs[alt][key])
-            if choice == "first":
-                quality.original_better += 1
-            elif choice == "second":
-                quality.variant_better += 1
-            else:
-                quality.ties += 1
-
-    baseline = variant_results[variants[0]]
-    rest = [variant_results[v] for v in variants[1:]]
+    baseline = results[variants[0]]
+    rest = [results[v] for v in variants[1:]]
     best = max(rest, key=lambda v: v.hit_rate) if rest else baseline
-    hit_improved = best.hit_rate > baseline.hit_rate + 0.05
-    if hit_improved and quality.variant_not_worse:
+    delta = best.hit_rate - baseline.hit_rate
+    saved_delta = best.saved_usd - baseline.saved_usd
+    if delta > HIT_IMPROVEMENT_THRESHOLD:
         verdict = (
-            f"APPLY: {best.name} (hit rate {baseline.hit_rate:.0%} -> {best.hit_rate:.0%}, "
-            f"качество не хуже: {quality.variant_better + quality.ties}/{quality.total})"
+            f"ФИКС ЭФФЕКТИВЕН: hit rate {baseline.hit_rate:.0%} -> {best.hit_rate:.0%} "
+            f"(+{delta:.0%}), экономия на выборке ${saved_delta:.4f}. "
+            f"Качество — проверьте вашим eval'ом перед применением (D18)."
         )
-    elif hit_improved:
-        verdict = "ПРОВЕРИТЬ ВРУЧНУЮ: hit rate вырос, но качество требует ручной оценки"
     else:
-        verdict = "DON'T APPLY: улучшения hit rate не достигнуто"
-    return ExperimentReport(
-        session_count=len(cases),
-        baseline=baseline,
-        variants=rest,
-        quality=quality,
-        verdict=verdict,
-    )
+        verdict = (
+            f"ФИКС НЕ ДАЁТ ВЫИГРЫША: hit rate {baseline.hit_rate:.0%} -> {best.hit_rate:.0%} "
+            f"({delta:+.0%}). Причина может быть вне кеша."
+        )
+    return ExperimentReport(session_count=len(cases), baseline=baseline, variants=rest, verdict=verdict)

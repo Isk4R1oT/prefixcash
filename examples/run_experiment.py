@@ -4,7 +4,8 @@
     uv run python examples/run_experiment.py
 
 Что происходит: реплей 2 сессий x 2 хода в двух вариантах (broken/fixed),
-замер hit rate по usage DeepSeek, LLM-as-judge качества, вердикт APPLY/DON'T.
+замер hit rate и $ экономии по usage DeepSeek, вердикт по экономике кеша.
+Качество фиксов — пользователь проверяет своим eval'ом (D25).
 """
 
 from __future__ import annotations
@@ -72,7 +73,7 @@ def main() -> None:
         )
         for s in STAGING_SESSIONS
     ]
-    report = run_experiment(cases, client, judge=client, prompt_for=prompt_for)
+    report = run_experiment(cases, client, prompt_for=prompt_for)
     print(report.render_md())
 
 

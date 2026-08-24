@@ -34,7 +34,7 @@ uv run prefixcash tui --file examples/diagnose.jsonl       # интеракти�
 
 ## Эксперименты в staging (experiment.py)
 
-Проверка фикс-вариантов на выборке: hit rate + качество (LLM-as-judge) — до прода (advisory, D18).
+Проверка фикс-вариантов на выборке: hit rate + $ экономии — до прода (advisory, D18). Качество фиксов проверяется вашим eval'ом (D25).
 
 ```bash
 export DEEPSEEK_API_KEY=sk-...        # или cp examples/.env.example examples/.env

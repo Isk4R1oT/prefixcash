@@ -1,6 +1,6 @@
 """Тесты experiment.py на фейковом клиенте (без сети)."""
 
-from prefixcash.optimize.experiment import SessionCase, judge_pairwise, run_experiment
+from prefixcash.optimize.experiment import SessionCase, run_experiment
 
 
 class FakeClient:
@@ -36,11 +36,6 @@ class FakeClient:
         return "Ответ.", usage
 
 
-class TieJudge:
-    def complete(self, messages: list[dict]) -> tuple[str, dict]:
-        return '{"choice": "tie"}', {}
-
-
 STATIC = "static base " + "x" * 120
 _counter = {"n": 0}
 
@@ -61,38 +56,22 @@ def _cases():
 
 def test_fixed_beats_baseline_on_hit_rate():
     client = FakeClient()
-    report = run_experiment(_cases(), client, prompt_for=_prompt_for, judge=TieJudge())
+    report = run_experiment(_cases(), client, prompt_for=_prompt_for)
     assert report.baseline.hit_rate < report.variants[0].hit_rate
     assert report.variants[0].hit_rate > 0.5
-    assert "APPLY" in report.verdict
+    assert "ФИКС ЭФФЕКТИВЕН" in report.verdict
 
 
-def test_quality_pairs_counted():
+def test_report_md_contains_economics():
     client = FakeClient()
-    report = run_experiment(_cases(), client, prompt_for=_prompt_for, judge=TieJudge())
-    # 2 сессии x 2 хода = 4 пары для судьи
-    assert report.quality.total == 4
-    assert report.quality.ties == 4
-    assert report.quality.variant_not_worse
-
-
-def test_report_md_contains_verdict():
-    client = FakeClient()
-    report = run_experiment(_cases(), client, prompt_for=_prompt_for, judge=TieJudge())
+    report = run_experiment(_cases(), client, prompt_for=_prompt_for)
     md = report.render_md()
-    assert "APPLY" in md
+    assert "Экономия на выборке" in md
     assert "hit %" in md
+    assert report.saved_delta_usd > 0
 
 
-def test_judge_pairwise_parses_choice():
-    class Judge:
-        def complete(self, messages: list[dict]) -> tuple[str, dict]:
-            return '{"choice": "second"}', {}
-
-    assert judge_pairwise(Judge(), "q", "a", "b") == "second"
-
-
-def test_verdict_dont_apply_when_variant_worse():
+def test_verdict_no_gain_when_variant_worse():
     def worse_prompt(variant: str, session_id: str) -> str:
         if variant == "baseline":
             return STATIC
@@ -100,6 +79,6 @@ def test_verdict_dont_apply_when_variant_worse():
         return f"ломалка: {_counter['n']:020d}. {STATIC}"  # ломает префикс в начале
 
     client = FakeClient()
-    report = run_experiment(_cases(), client, prompt_for=worse_prompt, judge=TieJudge())
+    report = run_experiment(_cases(), client, prompt_for=worse_prompt)
     assert report.variants[0].hit_rate < report.baseline.hit_rate
-    assert "DON'T APPLY" in report.verdict
+    assert "ФИКС НЕ ДАЁТ ВЫИГРЫША" in report.verdict

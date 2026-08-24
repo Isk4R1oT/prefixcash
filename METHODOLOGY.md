@@ -107,6 +107,9 @@ Reports in P0/P1 show point estimates only.
   (recommendation: keep-alive warm-up, P2).
 - **All fixes are advisory (D18):** the tool proposes variants; nothing that
   changes a prompt is applied automatically.
+- **Experiments measure cache economics only (D25):** quality validation of a
+  fix is the user's own eval — prefixcash shows where the cache breaks and how
+  much a correct assembly saves, not whether the output is "better".
 
 ## 10. Advisory-first principle (D18)
 
