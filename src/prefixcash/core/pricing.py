@@ -24,15 +24,30 @@ class PriceEntry:
     verified: bool = False        # False = оценка, требует проверки перед релизом
 
 
+def _p(
+    base: float,
+    cached: float,
+    ttl: str,
+    source: str,
+    *,
+    verified: bool = False,
+    updated: str = "2026-08-22",
+) -> PriceEntry:
+    """Компактный конструктор PriceEntry (цены проверены 2026-08-22, см. METHODOLOGY.md)."""
+    return PriceEntry(base, cached, ttl, updated, source, verified)
+
+
 # Ключ ("provider", "model"); "default" — фолбэк для неизвестных моделей провайдера.
+# verified=True — цена подтверждена источником; verified=False — оценка.
 PRICING: dict[tuple[str, str], PriceEntry] = {
-    ("openai", "gpt-4o"): PriceEntry(2.50, 1.25, "~1h", "2026-08-22", "https://openai.com/api/pricing/"),
-    ("openai", "gpt-4o-mini"): PriceEntry(0.15, 0.075, "~1h", "2026-08-22", "https://openai.com/api/pricing/"),
-    ("openai", "default"): PriceEntry(2.50, 1.25, "~1h", "2026-08-22", "https://openai.com/api/pricing/"),
-    ("anthropic", "default"): PriceEntry(3.00, 0.30, "5min-1h", "2026-08-22", "https://docs.anthropic.com/en/docs/build-with-claude/prompt-caching"),
-    ("deepseek", "deepseek-chat"): PriceEntry(0.27, 0.014, "hours", "2026-08-22", "https://api-docs.deepseek.com/quick_start/pricing"),
-    ("deepseek", "deepseek-reasoner"): PriceEntry(0.55, 0.14, "hours", "2026-08-22", "https://api-docs.deepseek.com/quick_start/pricing"),
-    ("deepseek", "default"): PriceEntry(0.27, 0.014, "hours", "2026-08-22", "https://api-docs.deepseek.com/quick_start/pricing"),
+    ("openai", "gpt-4o"): _p(2.50, 1.25, "~1h", "tokenmix.ai (cached 50% off)", verified=True),
+    ("openai", "gpt-4o-mini"): _p(0.15, 0.075, "~1h", "openai.com/api/pricing", verified=True),
+    ("openai", "default"): _p(2.50, 1.25, "~1h", "fallback = gpt-4o-class"),
+    ("anthropic", "default"): _p(3.00, 0.30, "5min-1h", "dev.to/claudeguide (read = 0.1x)", verified=True),
+    ("deepseek", "deepseek-chat"): _p(0.74, 0.028, "hours", "apidog.com deepseek-v4 (96% off)", verified=True),
+    ("deepseek", "deepseek-reasoner"): _p(0.55, 0.14, "hours", "api-docs.deepseek.com (может быть вытеснен V4)"),
+    ("deepseek", "default"): _p(0.74, 0.028, "hours", "fallback = deepseek-chat (V4)"),
+    ("gemini", "default"): _p(0.75, 0.075, "5min (sliding)", "theneuralbase.com (90% off, Apr 2026)", verified=True),
 }
 
 
@@ -54,6 +69,10 @@ def lookup(
     entry = table.get((provider, model))
     if entry is None:
         entry = table.get((provider, "default"))
+    if entry is None and provider == "openrouter" and "/" in model:
+        # OpenRouter: модель вида "anthropic/claude-sonnet-4" — резолвим реального провайдера
+        real_provider, real_model = model.split("/", 1)
+        entry = table.get((real_provider, real_model)) or table.get((real_provider, "default"))
     return entry
 
 
