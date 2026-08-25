@@ -40,8 +40,24 @@ uv run prefixcash tui --file examples/diagnose.jsonl       # интеракти�
 export DEEPSEEK_API_KEY=sk-...        # или cp examples/.env.example examples/.env
 uv sync --extra dev --extra examples
 uv run python -m examples.sales_agent            # агент на LangChain (один ход)
-uv run python -m examples.run_experiment         # broken vs fixed: hit rate + качество
+uv run python -m examples.run_experiment         # broken vs fixed: hit rate + экономия
+uv run python -m benchmark.verify_diagnose       # офлайн-проверка диагностики (без сети)
+uv run python -m benchmark.run_benchmark         # живой прогон -> benchmark/RESULTS.md
 ```
+
+## Бенчмарк (живой прогон, DeepSeek)
+
+Диагностика находит поломки во всех сценариях; реплей подтверждает экономику фиксов:
+
+| сценарий | диагноз | hit% baseline | hit% fixed | Δ | вердикт |
+|---|---|---:|---:|---:|---|
+| sales-timestamp | dynamic_iso_datetime | 65% | 87% | +22% | ФИКС ЭФФЕКТИВЕН |
+| sales-uuid | dynamic_uuid | 66% | 98% | +33% | ФИКС ЭФФЕКТИВЕН |
+| kb-reorder | content_change | 49% | 99% | +49% | ФИКС ЭФФЕКТИВЕН |
+| short-prompt | — | 0% | 0% | 0% | ФИКС НЕ ДАЁТ ВЫИГРЫША |
+| real-framework (claude-quant L2) | dynamic_iso_datetime | 50% | 75% | +24% | ФИКС ЭФФЕКТИВЕН |
+
+Подробности и $ экономии на выборке: [benchmark/RESULTS.md](benchmark/RESULTS.md).
 
 ## Лицензия
 
