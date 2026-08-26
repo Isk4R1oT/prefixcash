@@ -1,6 +1,6 @@
 [project]
 name = "prefixcash"
-version = "0.2.0"
+version = "0.2.1"0.2.0"
 description = "Measure, diagnose and fix your LLM prompt-cache hit rate — and see the dollars you save."
 readme = "README.md"
 requires-python = ">=3.11"
