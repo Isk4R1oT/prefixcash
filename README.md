@@ -30,6 +30,10 @@ LLM providers cache attention states by the **exact token prefix** of your promp
 - **Fix (advisory, D18)** — the **prefix heatmap** shows exactly where the cache is lost and proposes assembly fixes (static prefix first, dynamic to the end); cache-aware routing recommendations (pin cache-friendly providers); batch-ordering of calls with shared prefixes — **free warm-up from natural traffic, zero extra tokens** (no 24/7 keep-alive pings).
 - **Prove** — `report` produces the *«$ saved vs cold baseline»* artifact with a public methodology; `experiment` replays fix variants on a staging sample and gives a cache-economics verdict (quality is validated with your own eval, D25).
 
+## Getting started
+
+New here? Start with the **[RUNBOOK — from zero to saved dollars in ~10 minutes](docs/RUNBOOK.md)**: install, attach the callback, see your hit rate, find the leak, apply a fix, prove it.
+
 ## Library usage
 
 `prefixcash` is a library first. The four verbs map to typed functions:
