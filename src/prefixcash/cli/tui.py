@@ -1,8 +1,8 @@
-"""Textual TUI: монитор + тепловая карта префиксов (D16, D23).
+"""Textual TUI: monitor + prefix heatmap (D16, D23).
 
-Управление: j/k — переключение сессий. Тепловая карта показывает, где в промпте
-кеш стабилен (зелёный), колеблется (жёлтый) и где теряется (красный), плюс
-конкретные фикс-предложения (assembly-lint, advisory D18).
+Controls: j/k — switch sessions. The heatmap shows where in the prompt the cache
+is stable (green), fluctuates (yellow) and is lost (red), plus concrete fix
+suggestions (assembly-lint, advisory D18).
 """
 
 from __future__ import annotations
@@ -20,7 +20,7 @@ from prefixcash.diagnose.heatmap import build_heatmap, render_heatmap_markup
 
 
 class PrefixCashTui(App):
-    """Интерактивный монитор prefixcash."""
+    """Interactive prefixcash monitor."""
 
     TITLE = "prefixcash — cache heatmap"
     CSS = """
@@ -50,13 +50,13 @@ class PrefixCashTui(App):
     def on_mount(self) -> None:
         self.refresh_all()
 
-    # --- рендер ---
+    # --- rendering ---
     def refresh_all(self) -> None:
         self.query_one("#stats", Static).update(self._stats_text())
         self.query_one("#routing", Static).update(self._routing_text())
         sid = self._session_ids[self._idx] if self._session_ids else None
         if sid is None:
-            self.query_one("#heatmap", Static).update("(нет сессий с промптами)")
+            self.query_one("#heatmap", Static).update("(no sessions with prompts)")
             self.query_one("#fixes", Static).update("")
             return
         hm = build_heatmap(sid, self._sessions[sid])
@@ -65,7 +65,7 @@ class PrefixCashTui(App):
 
     def _stats_text(self) -> str:
         if not self._calls:
-            return "(нет данных)"
+            return "(no data)"
         agg = aggregate([c.metrics for c in self._calls])
         saved = 0.0
         for c in self._calls:
@@ -76,23 +76,23 @@ class PrefixCashTui(App):
         total = len(self._session_ids)
         return (
             f"calls: {agg.calls} | hit rate: {agg.hit_rate:.1%} | saved: ${saved:.2f}\n"
-            f"сессия {idx + 1}/{total}: {self._session_ids[idx] if self._session_ids else '-'} (j/k — переключение)"
+            f"session {idx + 1}/{total}: {self._session_ids[idx] if self._session_ids else '-'} (j/k — switch)"
         )
 
     def _routing_text(self) -> str:
         from prefixcash.optimize.routing import recommend
 
-        return f"маршрутизация (advisory): {recommend()}"
+        return f"routing (advisory): {recommend()}"
 
     def _fixes_text(self, fixes: list[AssemblySuggestion]) -> str:
         if not fixes:
-            return "фикс-предложения: стабильный префикс, поломок нет"
-        lines = [f"фикс-предложения ({len(fixes)}):"]
+            return "fix suggestions: stable prefix, no breakage"
+        lines = [f"fix suggestions ({len(fixes)}):"]
         for f in fixes[:6]:
             lines.append(f"  [red]{f.position}: {f.word}[/] — {f.suggestion}")
         return "\n".join(lines)
 
-    # --- управление ---
+    # --- controls ---
     def key_j(self) -> None:
         if self._session_ids:
             self._idx = (self._idx + 1) % len(self._session_ids)

@@ -36,29 +36,29 @@ def main() -> None:
         card = (
             f"| {sc.name} | {', '.join(causes) or '—'} | "
             f"{report.baseline.hit_rate:.1%} | {report.best_variant.hit_rate:.1%} | "
-            f"{report.hit_rate_delta:+.1%} | ${report.saved_delta_usd:.4f} | {report.verdict.split('.')[0]} |"
+            f"{report.hit_rate_delta:+.1%} | ${report.saved_delta_usd:.4f} | {report.verdict.split(':')[0]} |"
         )
         cards.append(card)
 
     lines = [
         "# prefixcash benchmark — report cards",
         "",
-        f"Дата: {datetime.now().isoformat(timespec='minutes')} · провайдер: DeepSeek (deepseek-chat) · ",
-        "порог автоматического кеша: префикс ≥ ~1024 токенов (проверено отдельно).",
+        f"Date: {datetime.now().isoformat(timespec='minutes')} · provider: DeepSeek (deepseek-chat) · ",
+        "automatic-cache threshold: prefix ≥ ~1024 tokens (verified separately).",
         "",
-        "| сценарий | диагноз (что ломает) | hit% baseline | hit% fixed | Δ | saved $ (выборка) | вердикт |",
+        "| scenario | diagnosis | hit% baseline | hit% fixed | Δ | saved $ (sample) | verdict |",
         "|---|---:|---:|---:|---:|---:|---|",
         *cards,
         "",
-        "Примечания:",
-        "- Диагноз — результат офлайн-проверки диагностики (`benchmark/verify_diagnose.py`).",
-        "- `short-prompt` — намеренный негативный кейс: кеш не включается на коротких промптах.",
-        "- Экономия приведена на выборке бенчмарка; экстраполяция на прод — по вашей нагрузке.",
-        "- Числа зависят от состояния кеша провайдера (TTL) и порядка прогонов (см. METHODOLOGY.md).",
+        "Notes:",
+        "- Diagnosis — offline diagnose verification (`benchmark/verify_diagnose.py`).",
+        "- `short-prompt` — intentional negative case: cache does not engage on short prompts.",
+        "- Savings are for the benchmark sample; extrapolate to production by your own load.",
+        "- Numbers depend on provider cache state (TTL) and run order (see METHODOLOGY.md).",
         "",
     ]
     OUT.write_text("\n".join(lines), encoding="utf-8")
-    print(f"\nRESULTS.md записан: {OUT}")
+    print(f"\nRESULTS.md written: {OUT}")
 
 
 if __name__ == "__main__":

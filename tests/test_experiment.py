@@ -59,14 +59,14 @@ def test_fixed_beats_baseline_on_hit_rate():
     report = run_experiment(_cases(), client, prompt_for=_prompt_for)
     assert report.baseline.hit_rate < report.variants[0].hit_rate
     assert report.variants[0].hit_rate > 0.5
-    assert "ФИКС ЭФФЕКТИВЕН" in report.verdict
+    assert "FIX WORKS" in report.verdict
 
 
 def test_report_md_contains_economics():
     client = FakeClient()
     report = run_experiment(_cases(), client, prompt_for=_prompt_for)
     md = report.render_md()
-    assert "Экономия на выборке" in md
+    assert "Sample savings" in md
     assert "hit %" in md
     assert report.saved_delta_usd > 0
 
@@ -81,4 +81,4 @@ def test_verdict_no_gain_when_variant_worse():
     client = FakeClient()
     report = run_experiment(_cases(), client, prompt_for=worse_prompt)
     assert report.variants[0].hit_rate < report.baseline.hit_rate
-    assert "ФИКС НЕ ДАЁТ ВЫИГРЫША" in report.verdict
+    assert "NO GAIN" in report.verdict

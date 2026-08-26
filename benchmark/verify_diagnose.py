@@ -58,7 +58,7 @@ def verify(scenario: Scenario) -> tuple[bool, list[str], list[str]]:
 
 
 def main() -> None:
-    print(f"{'сценарий':<16} {'ожидание':<24} {'найдено':<24} результат")
+    print(f"{'scenario':<16} {'expected':<24} {'detected':<24} result")
     print("-" * 80)
     all_ok = True
     for sc in SCENARIOS:
@@ -69,7 +69,7 @@ def main() -> None:
             f"{'PASS' if ok else 'FAIL'}"
         )
     print("-" * 80)
-    print("ИТОГ:", "все сценарии PASS" if all_ok else "есть FAIL")
+    print("RESULT:", "all scenarios PASS" if all_ok else "some FAIL")
     if not all_ok:
         raise SystemExit(1)
 

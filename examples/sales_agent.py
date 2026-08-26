@@ -53,7 +53,7 @@ def main() -> None:
     messages.append({"role": "user", "content": query})
     messages = agent_turn(llm, messages)
     last = messages[-1]
-    print(f"[{version}] ответ: {last.content}")
+    print(f"[{version}] answer: {last.content}")
 
 
 if __name__ == "__main__":

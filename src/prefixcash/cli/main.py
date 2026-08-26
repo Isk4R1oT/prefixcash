@@ -1,4 +1,4 @@
-"""CLI prefixcash: report / monitor / diagnose / providers / import (P0+P1)."""
+"""prefixcash CLI: report / monitor / diagnose / providers / import / tui."""
 
 from __future__ import annotations
 
@@ -24,17 +24,17 @@ console = Console()
 @click.group()
 @click.version_option(__version__)
 def cli() -> None:
-    """prefixcash — экономика префикс-кеша для LLM-приложений."""
+    """prefixcash — prefix-cache economics for LLM applications."""
 
 
 @cli.command()
-@click.option("--file", "path", type=click.Path(exists=True, dir_okay=False), required=True, help="JSONL-лог вызовов")
+@click.option("--file", "path", type=click.Path(exists=True, dir_okay=False), required=True, help="call log (JSONL)")
 @click.option("--format", "fmt", type=click.Choice(["md", "json"]), default="md", show_default=True)
 def report(path: str, fmt: str) -> None:
-    """Отчёт «$ сэкономлено» vs холодный бейзлайн (артефакт для тех, кто платит)."""
+    """Report «$ saved» vs cold baseline (the artifact for whoever pays the bill)."""
     metrics = list(iter_jsonl(path))
     if not metrics:
-        raise click.ClickException("в логе нет записей с usage")
+        raise click.ClickException("no usage records in the log")
     rep = build_report(metrics)
     if fmt == "json":
         console.print_json(json.dumps(report_to_dict(rep), ensure_ascii=False))
@@ -43,12 +43,12 @@ def report(path: str, fmt: str) -> None:
 
 
 @cli.command()
-@click.option("--file", "path", type=click.Path(exists=True, dir_okay=False), required=True, help="JSONL-лог вызовов")
+@click.option("--file", "path", type=click.Path(exists=True, dir_okay=False), required=True, help="call log (JSONL)")
 def monitor(path: str) -> None:
-    """Снимок hit rate по провайдерам/моделям (live TUI на Textual — P1)."""
+    """Snapshot of hit rate by provider/model (see `tui` for the live dashboard)."""
     metrics = list(iter_jsonl(path))
     if not metrics:
-        raise click.ClickException("в логе нет записей с usage")
+        raise click.ClickException("no usage records in the log")
     console.print(metrics_table(metrics))
 
 
@@ -58,47 +58,47 @@ def monitor(path: str) -> None:
     "path",
     type=click.Path(exists=True, dir_okay=False),
     required=True,
-    help="JSONL-лог вызовов (нужны prompt/messages)",
+    help="call log (JSONL) — needs prompt/messages",
 )
-@click.option("--session", "session", default=None, help="фильтр по session_id")
-@click.option("--json", "as_json", is_flag=True, help="вывод в JSON")
+@click.option("--session", "session", default=None, help="filter by session_id")
+@click.option("--json", "as_json", is_flag=True, help="output as JSON")
 def diagnose(path: str, session: str | None, as_json: bool) -> None:
-    """Что ломает префикс-кеш внутри сессий: находки + тепловая карта + фиксы (advisory, D18)."""
+    """What breaks the prefix cache inside sessions: findings + heatmap + fixes (advisory, D18)."""
     calls = [c for c in iter_calls(path) if session is None or c.metrics.session_id == session]
     sessions = group_by_session(calls)
     if as_json:
         console.print_json(json.dumps(_findings_to_dict(analyze_calls(calls)), ensure_ascii=False))
         return
     if not sessions:
-        console.print("В логе нет записей с usage.")
+        console.print("No usage records in the log.")
         return
     total = 0
     for sid, group in sorted(sessions.items()):
         fs = analyze_session(sid, group)
         total += len(fs)
         hm = build_heatmap(sid, group)
-        console.print(f"[bold]{sid}[/bold] — {len(fs)} находок, стабильность префикса {hm.hot_ratio:.0%}")
+        console.print(f"[bold]{sid}[/bold] — {len(fs)} findings, prefix stability {hm.hot_ratio:.0%}")
         for f in fs:
             prev = f.prev_call_index if f.prev_call_index is not None else "?"
-            console.print(f"  call {prev} -> {f.call_index}: общий префикс {f.shared_prefix_words} слов")
+            console.print(f"  call {prev} -> {f.call_index}: shared prefix {f.shared_prefix_words} words")
             if f.break_words:
-                console.print(f"    слова после разрыва: {' '.join(f.break_words)}")
+                console.print(f"    words after the break: {' '.join(f.break_words)}")
             for c in f.causes:
                 console.print(f"    • [red]{c.kind}[/red]: {c.detail}")
             for v in f.fix_variants:
-                console.print(f"    → фикс: {v}")
+                console.print(f"    → fix: {v}")
         if hm.cells:
-            console.print("  тепловая карта (цвет = стабильность префикса):")
+            console.print("  heatmap (color = prefix stability):")
             console.print("  " + render_heatmap_markup(hm, limit=24))
             for s in lint(hm)[:4]:
                 console.print(f"    [red]{s.position}: {s.word}[/] — {s.suggestion}")
-    console.print(f"\nИтого: {total} поломок в {len(sessions)} сессиях")
+    console.print(f"\nTotal: {total} breakages in {len(sessions)} sessions")
 
 
 @cli.command()
 def providers() -> None:
-    """Таблица кеш-семантики провайдеров (цены, TTL)."""
-    table = Table(title="prefixcash — pricing (PRELIMINARY: проверить перед релизом)")
+    """Provider cache-semantics table (prices, TTL)."""
+    table = Table(title="prefixcash — pricing (PRELIMINARY: verify before release)")
     table.add_column("provider")
     table.add_column("model")
     table.add_column("base $/1M")
@@ -120,14 +120,14 @@ def providers() -> None:
 
 
 @cli.command()
-@click.option("--file", "path", type=click.Path(exists=True, dir_okay=False), required=True, help="JSONL-лог вызовов")
+@click.option("--file", "path", type=click.Path(exists=True, dir_okay=False), required=True, help="call log (JSONL)")
 def tui(path: str) -> None:
-    """Интерактивный TUI: статистика + тепловая карта префиксов (j/k — сессии)."""
+    """Interactive TUI: stats + prefix heatmap (j/k — sessions)."""
     from prefixcash.cli.tui import PrefixCashTui
 
     calls = list(iter_calls(path))
     if not calls:
-        raise click.ClickException("в логе нет записей с usage")
+        raise click.ClickException("no usage records in the log")
     PrefixCashTui(calls).run()
 
 
@@ -137,11 +137,11 @@ def tui(path: str) -> None:
     "path",
     type=click.Path(exists=True, dir_okay=False),
     required=True,
-    help="исходный JSONL (LiteLLM/OpenRouter/сырые записи)",
+    help="source JSONL (LiteLLM/OpenRouter/raw records)",
 )
 @click.option("--out", "out", type=click.Path(dir_okay=False), default="prefixcash.jsonl", show_default=True)
 def import_cmd(path: str, out: str) -> None:
-    """Нормализует лог в JSONL prefixcash."""
+    """Normalize a log into prefixcash JSONL."""
     count = 0
     with open(out, "w", encoding="utf-8") as fh:
         for m in iter_jsonl(path):
@@ -168,7 +168,7 @@ def _record(m) -> dict:
 
 
 def _findings_to_dict(findings: dict[str, list]) -> dict:
-    """Сериализует находки diagnose в JSON."""
+    """Serialize diagnose findings to JSON."""
     return {
         sid: [
             {

@@ -1,4 +1,4 @@
-"""P0: статический rich-снимок метрик (live TUI на Textual — P1, D16)."""
+"""Static rich snapshot of metrics (live Textual TUI — `tui` command)."""
 
 from __future__ import annotations
 

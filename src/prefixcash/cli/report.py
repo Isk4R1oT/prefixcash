@@ -1,4 +1,4 @@
-"""Отчёт «$ сэкономлено» vs холодный бейзлайн (артефакт для тех, кто платит)."""
+"""Report «$ saved» vs cold baseline (the artifact for whoever pays the bill)."""
 
 from __future__ import annotations
 
@@ -78,7 +78,7 @@ def render_md(report: Report) -> str:
     lines = [
         "# prefixcash report",
         "",
-        "Методология: бейзлайн = весь инпут по полной цене (консервативно). См. METHODOLOGY.md.",
+        "Methodology: baseline = all input at full price (conservative). See METHODOLOGY.md.",
         "",
         "| provider | calls | input | cache read | hit % | base $ | actual $ | saved $ |",
         "|---|---:|---:|---:|---:|---:|---:|---:|",

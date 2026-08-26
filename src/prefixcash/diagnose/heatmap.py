@@ -94,10 +94,10 @@ def heatmap_text(hm: PromptHeatmap) -> str:
 def render_heatmap_markup(hm: PromptHeatmap, limit: int | None = None) -> str:
     """Тепловая карта как rich-разметка (цвет по стабильности)."""
     if not hm.cells:
-        return "(нет промптов в сессии)"
+        return "(no prompts in the session)"
     cells = hm.cells[:limit] if limit else hm.cells
     parts = [f"[{_COLORS[c.kind]}]{c.word}[/]" for c in cells]
     text = " ".join(parts)
     if limit and len(hm.cells) > limit:
-        text += f" … ещё {len(hm.cells) - limit} слов"
+        text += f" … {len(hm.cells) - limit} more words"
     return text

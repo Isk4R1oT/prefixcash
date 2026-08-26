@@ -57,7 +57,7 @@ def test_lint_suggests_move_to_end():
     assert suggestions
     first = suggestions[0]
     assert first.kinds and "time" in first.kinds[0]
-    assert "КОНЕЦ" in first.suggestion
+    assert "END" in first.suggestion
 
 
 def test_heatmap_empty_without_prompts():

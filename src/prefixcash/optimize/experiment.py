@@ -1,15 +1,15 @@
-"""experiment.py — проверка фикс-вариантов на выборке в staging (D24/D25).
+"""experiment.py — validate fix variants on a staging sample (D24/D25).
 
-Протокол (advisory, D18):
-1. Берём выборку сессий (staging-трафик): system_prompt + последовательности user-сообщений.
-2. Для каждого варианта сборки промпта прогоняем реплей через реального провайдера
-   и собираем usage -> hit rate и saved USD (через ценовые таблицы prefixcash).
-3. Вердикт по экономике кеша: улучшился ли hit rate и сколько $ экономии на выборке.
+Protocol (advisory, D18):
+1. Take a sample of sessions (staging traffic): system_prompt + user message sequences.
+2. Replay each prompt-assembly variant through the real provider and collect usage
+   -> hit rate and saved USD (via prefixcash pricing tables).
+3. Verdict on cache economics: did hit rate improve and how much $ is saved on the sample.
 
-Качество фиксов НЕ оцениваем (D25): у пользователя свой eval. Наша задача —
-показать, ГДЕ ломается кеш и СКОЛЬКО будет сэкономлено при правильной сборке.
+Quality is NOT evaluated here (D25): the user has their own eval. Our job is to
+show WHERE the cache breaks and HOW MUCH a correct assembly saves.
 
-Клиент-агностично: нужен любой объект с `complete(messages) -> (text, usage)`.
+Client-agnostic: any object with `complete(messages) -> (text, usage)` works.
 """
 
 from __future__ import annotations
@@ -132,9 +132,9 @@ class ExperimentReport:
                 f"| {v.base_input_cost:.4f} | {v.actual_input_cost:.4f} | {v.saved_usd:.4f} |"
             )
         lines.append("")
-        lines.append(f"Экономия на выборке при применении фикса: ${self.saved_delta_usd:.4f}")
+        lines.append(f"Sample savings if the fix is applied: ${self.saved_delta_usd:.4f}")
         lines.append("")
-        lines.append(f"**Вердикт: {self.verdict}**")
+        lines.append(f"**Verdict: {self.verdict}**")
         return "\n".join(lines)
 
 
@@ -177,10 +177,10 @@ def run_experiment(
     variants: Sequence[str] = DEFAULT_VARIANTS,
     max_turns: int | None = None,
 ) -> ExperimentReport:
-    """Прогоняет эксперимент: реплей по вариантам + вердикт по экономике кеша.
+    """Runs the experiment: replay variants + cache-economics verdict.
 
-    Качество фиксов оценивает пользователь своим eval'ом (D25) — здесь только
-    кеш-экономика: где ломается и сколько $ сэкономит правильная сборка.
+    Quality of fixes is validated by the user's own eval (D25) — here only
+    cache economics: where it breaks and how much $ a correct assembly saves.
     """
     results: dict[str, VariantResult] = {}
     for variant in variants:
@@ -199,13 +199,13 @@ def run_experiment(
     saved_delta = best.saved_usd - baseline.saved_usd
     if delta > HIT_IMPROVEMENT_THRESHOLD:
         verdict = (
-            f"ФИКС ЭФФЕКТИВЕН: hit rate {baseline.hit_rate:.0%} -> {best.hit_rate:.0%} "
-            f"(+{delta:.0%}), экономия на выборке ${saved_delta:.4f}. "
-            f"Качество — проверьте вашим eval'ом перед применением (D18)."
+            f"FIX WORKS: hit rate {baseline.hit_rate:.0%} -> {best.hit_rate:.0%} "
+            f"(+{delta:.0%}), sample saved ${saved_delta:.4f}. "
+            f"Validate quality with your own eval before applying (D18)."
         )
     else:
         verdict = (
-            f"ФИКС НЕ ДАЁТ ВЫИГРЫША: hit rate {baseline.hit_rate:.0%} -> {best.hit_rate:.0%} "
-            f"({delta:+.0%}). Причина может быть вне кеша."
+            f"NO GAIN: hit rate {baseline.hit_rate:.0%} -> {best.hit_rate:.0%} "
+            f"({delta:+.0%}). The cause may be outside caching."
         )
     return ExperimentReport(session_count=len(cases), baseline=baseline, variants=rest, verdict=verdict)

@@ -56,7 +56,7 @@ def test_detect_timestamp_breakage_within_session():
     kinds = [c.kind for c in findings[0].causes]
     assert "dynamic_time" in kinds
     assert findings[0].fix_variants
-    assert "КОНЕЦ" in findings[0].fix_variants[0]
+    assert "END" in findings[0].fix_variants[0]
 
 
 def test_detect_miss_despite_shared_prefix():

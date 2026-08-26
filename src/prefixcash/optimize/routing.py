@@ -53,9 +53,9 @@ def recommend(pool: list[str] | None = None, table: Mapping[tuple[str, str], obj
     if pool:
         ranked = [s for s in ranked if s.provider in pool]
     if not ranked:
-        return "нет данных о провайдерах"
+        return "no provider data"
     top = ranked[0]
     return (
-        f"{top.provider} (кеш-скидка {top.cache_discount:.0%}, TTL {top.ttl_hint}, "
-        f"score {top.score:.2f}) — пинить классы чатов с общим префиксом сюда"
+        f"{top.provider} (cache discount {top.cache_discount:.0%}, TTL {top.ttl_hint}, "
+        f"score {top.score:.2f}) — pin chat classes with a shared prefix here"
     )

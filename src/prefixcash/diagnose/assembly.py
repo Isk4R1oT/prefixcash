@@ -1,6 +1,6 @@
-"""assembly-lint: рекомендации по сборке промпта на основе тепловой карты.
+"""assembly-lint: prompt-assembly recommendations from the heatmap.
 
-Advisory (D18): только рекомендации, ничего не применяется автоматически.
+Advisory (D18): recommendations only, nothing is applied automatically.
 """
 
 from __future__ import annotations
@@ -13,7 +13,7 @@ from prefixcash.diagnose.heatmap import PromptHeatmap
 
 @dataclass
 class AssemblySuggestion:
-    """Предложение по сборке промпта для одной холодной позиции."""
+    """Prompt-assembly suggestion for one cold position."""
 
     position: int
     word: str
@@ -22,23 +22,23 @@ class AssemblySuggestion:
 
 
 _SUGGESTIONS: dict[str, str] = {
-    "iso_datetime": "перенести timestamp в КОНЕЦ промпта (после статического блока)",
-    "datetime": "перенести timestamp в КОНЕЦ промпта (после статического блока)",
-    "date": "вынести дату из префикса в конец или в метаданные сессии",
-    "time": "перенести time/timestamp в КОНЕЦ промпта",
-    "uuid": "убрать id из префикса — в метаданные/теги, не в текст",
-    "hex_token": "сгенерированные токены — в конец промпта",
-    "number": "проверить, что счётчик/номер не в позиции префикса",
-    "email": "персональные данные — в конец/метаданные",
-    "url_query": "стабилизировать URL или перенести в конец",
-    "placeholder": "плейсхолдер рендерить в КОНЕЦ промпта",
-    "high_entropy": "высокоэнтропийный сегмент — вынести из префикса",
-    "content_change": "стабилизировать эту часть промпта (меняется между вызовами)",
+    "iso_datetime": "move the timestamp to the END of the prompt (after the static block)",
+    "datetime": "move the timestamp to the END of the prompt (after the static block)",
+    "date": "move the date out of the prefix — to the end or session metadata",
+    "time": "move the time/timestamp to the END of the prompt",
+    "uuid": "remove the id from the prefix — to metadata/tags, not the text",
+    "hex_token": "generated tokens — to the end of the prompt",
+    "number": "check the counter/number is not in the prefix position",
+    "email": "personal data — to the end/metadata",
+    "url_query": "stabilize the URL or move it to the end",
+    "placeholder": "render the placeholder at the END of the prompt",
+    "high_entropy": "high-entropy segment — move out of the prefix",
+    "content_change": "stabilize this part of the prompt (it changes between calls)",
 }
 
 
 def lint(heatmap: PromptHeatmap) -> list[AssemblySuggestion]:
-    """Для холодных позиций даёт конкретные предложения по сборке промпта."""
+    """Gives concrete prompt-assembly suggestions for cold positions."""
     out: list[AssemblySuggestion] = []
     for pos in heatmap.cold_positions:
         cell = heatmap.cells[pos]
@@ -50,7 +50,7 @@ def lint(heatmap: PromptHeatmap) -> list[AssemblySuggestion]:
                 position=pos,
                 word=cell.word,
                 kinds=kinds,
-                suggestion=_SUGGESTIONS.get(kinds[0], "стабилизировать эту часть промпта"),
+                suggestion=_SUGGESTIONS.get(kinds[0], "stabilize this part of the prompt"),
             )
         )
     return out
