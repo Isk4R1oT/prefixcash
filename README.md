@@ -30,6 +30,39 @@ LLM providers cache attention states by the **exact token prefix** of your promp
 - **Fix (advisory, D18)** — the **prefix heatmap** shows exactly where the cache is lost and proposes assembly fixes (static prefix first, dynamic to the end); cache-aware routing recommendations (pin cache-friendly providers); batch-ordering of calls with shared prefixes — **free warm-up from natural traffic, zero extra tokens** (no 24/7 keep-alive pings).
 - **Prove** — `report` produces the *«$ saved vs cold baseline»* artifact with a public methodology; `experiment` replays fix variants on a staging sample and gives a cache-economics verdict (quality is validated with your own eval, D25).
 
+## Library usage
+
+`prefixcash` is a library first. The four verbs map to typed functions:
+
+```python
+from prefixcash import (
+    PrefixCashCallback, iter_calls, measure_log, diagnose_log,
+    build_heatmap, lint, suggest_order, run_experiment,
+)
+
+# 1. measure — drop-in LiteLLM callback (production)
+import litellm
+litellm.callbacks = [PrefixCashCallback(file="metrics.jsonl")]
+report = measure_log("metrics.jsonl")        # Report: hit rate + $ saved
+print(report.totals.hit_rate, report.totals.saved_usd)
+
+# 2. diagnose — where the prefix breaks inside sessions
+for session_id, findings in diagnose_log("metrics.jsonl").items():
+    for f in findings:
+        print(session_id, f.break_words, [c.kind for c in f.causes])
+
+# 3. fix (advisory) — heatmap + assembly suggestions + batch order
+calls = list(iter_calls("metrics.jsonl"))
+hm = build_heatmap(session_id, calls)
+for s in lint(hm):
+    print(s.position, s.word, "->", s.suggestion)
+order = suggest_order(calls)                 # zero extra tokens
+
+# 4. prove — replay fix variants on a staging sample
+report = run_experiment(cases, client, prompt_for=my_prompt_builder)
+print(report.verdict)                        # FIX WORKS / NO GAIN
+```
+
 ## Quick start
 
 ```bash
