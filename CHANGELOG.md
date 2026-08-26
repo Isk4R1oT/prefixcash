@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.1 — 2026-08-22
+
+- Release tooling: `scripts/release.sh` (version bump + tag), `docs/RELEASING.md`, trusted-publishing CI (tag-version check).
+- No library code changes.
+
 ## 0.2.0 — 2026-08-22
 
 Library release: prefixcash becomes a library you import in your code.
