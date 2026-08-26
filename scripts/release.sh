@@ -7,6 +7,7 @@ cd "$(dirname "$0")/.."
 
 python3 - "$VERSION" <<'PY'
 import pathlib
+import re
 import sys
 
 version = sys.argv[1]
@@ -15,9 +16,9 @@ for path in ("pyproject.toml", "src/prefixcash/__init__.py"):
     t = p.read_text(encoding="utf-8")
     old = t
     if path.endswith(".toml"):
-        t = t.replace('version = "', f'version = "{version}"', 1)
+        t = re.sub(r'(?m)^version = "[^"]*"', f'version = "{version}"', t, count=1)
     else:
-        t = t.replace('__version__ = "', f'__version__ = "{version}"', 1)
+        t = re.sub(r'__version__ = "[^"]*"', f'__version__ = "{version}"', t, count=1)
     if t == old:
         raise SystemExit(f"version marker not found in {path}")
     p.write_text(t, encoding="utf-8")

@@ -13,7 +13,7 @@ jobs:
       - uses: astral-sh/setup-uv@v5
         with:
           python-version: "3.12"
-      - run: uv sync --extra dev --extra examples
+      - run: uv sync --locked --extra dev
       - run: uv run ruff check src tests examples benchmark
       - run: uv run mypy src/prefixcash
       - run: uv run pytest

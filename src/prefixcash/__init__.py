@@ -42,7 +42,7 @@ from prefixcash.optimize.experiment import (
 )
 from prefixcash.optimize.routing import ProviderScore, cache_friendliness, recommend
 
-__version__ = "0.2.1"0.2.0"
+__version__ = "0.2.1"
 
 
 def measure_log(path: str) -> Report:

@@ -15,7 +15,7 @@ jobs:
       - uses: astral-sh/setup-uv@v5
         with:
           python-version: "3.12"
-      - run: uv sync --extra dev --extra examples
+      - run: uv sync --locked
       - name: Tag matches package version
         run: |
           TAG="${GITHUB_REF_NAME#v}"
