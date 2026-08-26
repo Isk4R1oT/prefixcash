@@ -16,6 +16,14 @@ jobs:
         with:
           python-version: "3.12"
       - run: uv sync --extra dev --extra examples
+      - name: Tag matches package version
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+          PKG="$(uv run python -c 'from prefixcash import __version__; print(__version__)')"
+          if [ "$TAG" != "$PKG" ]; then
+            echo "tag $TAG != package version $PKG"; exit 1
+          fi
+          echo "tag $TAG matches package version"
       - run: uv build
       - uses: pypa/gh-action-pypi-publish@release/v1
         with:
