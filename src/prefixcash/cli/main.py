@@ -39,7 +39,10 @@ def report(path: str, fmt: str) -> None:
     if fmt == "json":
         console.print_json(json.dumps(report_to_dict(rep), ensure_ascii=False))
     else:
-        console.print(render_md(rep))
+        # Дословно: rich перенёс бы длинные строки по ширине терминала и
+        # разрезал markdown-таблицу — `report > report.md` перестал бы
+        # быть валидным markdown на узком экране.
+        click.echo(render_md(rep))
 
 
 @cli.command()
@@ -98,7 +101,7 @@ def diagnose(path: str, session: str | None, as_json: bool) -> None:
 @cli.command()
 def providers() -> None:
     """Provider cache-semantics table (prices, TTL)."""
-    table = Table(title="prefixcash — pricing (PRELIMINARY: verify before release)")
+    table = Table(title="prefixcash — cache pricing (check `verified` against your own contract)")
     table.add_column("provider")
     table.add_column("model")
     table.add_column("base $/1M")

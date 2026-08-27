@@ -8,6 +8,18 @@ from prefixcash.core.metrics import CacheMetrics, aggregate
 from prefixcash.core.pricing import cost
 
 
+def _saved_by_key(metrics: list[CacheMetrics]) -> dict[tuple[str, str], float]:
+    """Экономия, просуммированная ОТДЕЛЬНО по каждой паре (provider, model)."""
+    saved: dict[tuple[str, str], float] = {}
+    for m in metrics:
+        breakdown = cost(m)
+        if not breakdown.priced:
+            continue
+        key = (m.provider, m.model)
+        saved[key] = saved.get(key, 0.0) + breakdown.saved_usd
+    return saved
+
+
 def metrics_table(metrics: list[CacheMetrics]) -> Table:
     table = Table(title="prefixcash — cache hit rate")
     table.add_column("provider")
@@ -17,21 +29,18 @@ def metrics_table(metrics: list[CacheMetrics]) -> Table:
     table.add_column("cache read")
     table.add_column("hit %")
     table.add_column("saved $")
-    rows: dict[tuple[str, str], tuple] = {}
-    for m in metrics:
-        key = (m.provider, m.model)
-        if key not in rows:
-            agg = aggregate(metrics, provider=m.provider, model=m.model)
-            saved = sum(c.saved_usd for c in (cost(x) for x in metrics) if c.priced)
-            rows[key] = (agg, saved)
-    for (provider, model), (agg, saved) in sorted(rows.items()):
+
+    saved_by_key = _saved_by_key(metrics)
+    keys = sorted({(m.provider, m.model) for m in metrics})
+    for provider, model in keys:
+        agg = aggregate(metrics, provider=provider, model=model)
         table.add_row(
             provider,
             model,
-            str(agg.calls),
+            f"{agg.calls:,}",
             f"{agg.input_tokens:,}",
             f"{agg.cache_read_tokens:,}",
             f"{agg.hit_rate:.1%}",
-            f"${saved:,.2f}",
+            f"${saved_by_key.get((provider, model), 0.0):,.2f}",
         )
     return table

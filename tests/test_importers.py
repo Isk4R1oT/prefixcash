@@ -63,3 +63,59 @@ def test_import_infers_provider_from_model(tmp_path):
     assert ms[0].hit_rate == 0.9
     assert ms[1].provider == "anthropic"
     assert ms[1].cache_read_tokens == 40
+
+
+def test_import_raw_anthropic_usage_keeps_cache_tokens(tmp_path):
+    """Сырой Anthropic-usage несёт и `input_tokens`, и свои cache-поля.
+
+    Регресс: он уходил в ветку нормализованного формата и терял
+    cache_read/cache_write — тихий 0% hit rate у провайдера с самой
+    большой скидкой на кеш.
+    """
+    log = tmp_path / "anthropic_raw.jsonl"
+    log.write_text(
+        json.dumps(
+            {
+                "provider": "anthropic",
+                "model": "claude-opus-4-8",
+                "usage": {
+                    "input_tokens": 2,
+                    "cache_creation_input_tokens": 35223,
+                    "cache_read_input_tokens": 20262,
+                    "output_tokens": 283,
+                },
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    (metrics,) = list(iter_jsonl(log))
+    assert metrics.cache_read_tokens == 20262
+    assert metrics.cache_write_tokens == 35223
+    # весь промпт = 2 (некешированный остаток) + 20262 (read) + 35223 (write)
+    assert metrics.input_tokens == 55487
+    assert 0.0 < metrics.hit_rate < 1.0
+
+
+def test_import_normalized_usage_still_parsed(tmp_path):
+    """Формат после `prefixcash import` не должен пострадать от фикса выше."""
+    log = tmp_path / "normalized.jsonl"
+    log.write_text(
+        json.dumps(
+            {
+                "provider": "anthropic",
+                "model": "claude-opus-4-8",
+                "usage": {
+                    "input_tokens": 2,
+                    "cache_write_tokens": 35223,
+                    "cache_read_tokens": 20262,
+                    "output_tokens": 283,
+                },
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    (metrics,) = list(iter_jsonl(log))
+    assert metrics.cache_read_tokens == 20262
+    assert metrics.cache_write_tokens == 35223

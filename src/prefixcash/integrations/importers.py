@@ -72,12 +72,34 @@ def _iter_records(path: str | Path) -> Iterator[dict]:
             yield json.loads(line)
 
 
+# Ключи, однозначно указывающие на СЫРОЙ провайдерский usage.
+# Anthropic — единственный, кто отдаёт и `input_tokens`, и свои cache-поля,
+# поэтому без этой проверки его записи ушли бы в ветку нормализованного
+# формата и потеряли cache_read/cache_write (тихий 0% hit rate).
+_RAW_USAGE_MARKERS = (
+    "cache_read_input_tokens",  # anthropic
+    "cache_creation_input_tokens",  # anthropic
+    "prompt_cache_hit_tokens",  # deepseek
+    "prompt_cache_miss_tokens",  # deepseek
+    "usageMetadata",  # gemini
+    "native_tokens_prompt_details",  # openrouter
+    "prompt_tokens_details",  # openai
+)
+
+
+def _is_normalized_usage(usage: Mapping) -> bool:
+    """True — usage уже в формате prefixcash (после `prefixcash import`)."""
+    if any(key in usage for key in _RAW_USAGE_MARKERS):
+        return False
+    return "input_tokens" in usage
+
+
 def _metrics_from_record(record: Mapping) -> CacheMetrics | None:
     """Строит CacheMetrics из записи (провайдерский ИЛИ нормализованный usage)."""
     usage = record.get("usage")
     if not usage:
         return None
-    if "input_tokens" in usage:
+    if _is_normalized_usage(usage):
         # наш нормализованный формат (после `prefixcash import`)
         kw: dict = {
             "provider": str(record.get("provider") or "unknown"),

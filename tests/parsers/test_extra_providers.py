@@ -11,7 +11,9 @@ def test_anthropic_parse_cache_fields():
         "cache_read_input_tokens": 640,
     }
     parsed = parse_usage("anthropic", payload)
-    assert parsed.input_tokens == 1000
+    # Anthropic отдаёт `input_tokens` без кеша; контракт ParsedUsage —
+    # весь промпт, поэтому 1000 + 640 (read) + 300 (write).
+    assert parsed.input_tokens == 1940
     assert parsed.cache_read_tokens == 640
     assert parsed.cache_write_tokens == 300
     assert parsed.output_tokens == 150
