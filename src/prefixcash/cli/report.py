@@ -5,6 +5,8 @@ from __future__ import annotations
 from collections.abc import Sequence
 from dataclasses import dataclass
 
+from rich.table import Table
+
 from prefixcash.core.metrics import CacheMetrics, aggregate
 from prefixcash.core.pricing import cost
 
@@ -128,3 +130,49 @@ def report_to_dict(report: Report) -> dict:
             "saved_usd": round(t.saved_usd, 2),
         }
     return {"overall_hit_rate": round(report.overall_hit_rate, 4), "totals": totals, "providers": rows}
+
+
+def _tokens(value: int) -> str:
+    """Компактная запись количества токенов: 32.5B вместо 32,534,634,121."""
+    for limit, suffix in ((1_000_000_000, "B"), (1_000_000, "M"), (1_000, "K")):
+        if value >= limit:
+            return f"{value / limit:.1f}{suffix}"
+    return str(value)
+
+
+def render_table(report: Report) -> Table:
+    """Отчёт как таблица для терминала (markdown — для файла, см. render_md).
+
+    Подписи колонок английские: CLI одноязычный, локализации нет.
+    """
+    table = Table(title="prefixcash — savings vs a cold baseline")
+    table.add_column("provider")
+    table.add_column("calls", justify="right")
+    table.add_column("input", justify="right")
+    table.add_column("cache read", justify="right")
+    table.add_column("hit %", justify="right")
+    table.add_column("base $", justify="right")
+    table.add_column("actual $", justify="right")
+    table.add_column("saved $", justify="right", style="green")
+
+    # TOTAL дублирует единственную строку — показываем только при нескольких провайдерах
+    rows = [*report.providers]
+    show_total = report.totals is not None and len(report.providers) > 1
+    if show_total and report.totals is not None:
+        rows.append(report.totals)
+    for i, p in enumerate(rows):
+        total_row = show_total and i == len(rows) - 1
+        style = "bold" if total_row else ""
+        table.add_row(
+            p.provider,
+            f"{p.calls:,}",
+            _tokens(p.input_tokens),
+            _tokens(p.cache_read_tokens),
+            f"{p.hit_rate:.1%}",
+            f"${p.base_input_cost:,.2f}",
+            f"${p.actual_input_cost:,.2f}",
+            f"${p.saved_usd:,.2f}",
+            style=style,
+            end_section=total_row,
+        )
+    return table

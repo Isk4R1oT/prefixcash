@@ -10,7 +10,7 @@ from rich.table import Table
 
 from prefixcash import __version__
 from prefixcash.cli.monitor import metrics_table
-from prefixcash.cli.report import build_report, render_md, report_to_dict
+from prefixcash.cli.report import build_report, render_md, render_table, report_to_dict
 from prefixcash.core.pricing import PRICING
 from prefixcash.diagnose.assembly import lint
 from prefixcash.diagnose.engine import analyze_calls, group_by_session
@@ -29,26 +29,41 @@ def cli() -> None:
 
 @cli.command()
 @click.option("--file", "path", type=click.Path(exists=True, dir_okay=False), required=True, help="call log (JSONL)")
-@click.option("--format", "fmt", type=click.Choice(["md", "json"]), default="md", show_default=True)
+@click.option(
+    "--format",
+    "fmt",
+    type=click.Choice(["table", "md", "json"]),
+    default="table",
+    show_default=True,
+    help="table — read it here; md/json — save it to a file",
+)
 def report(path: str, fmt: str) -> None:
-    """Report «$ saved» vs cold baseline (the artifact for whoever pays the bill)."""
+    """What the cache saved you, in dollars.
+
+    The artifact for whoever pays the bill: «$ saved» vs a cold baseline.
+    """
     metrics = list(iter_jsonl(path))
     if not metrics:
         raise click.ClickException("no usage records in the log")
     rep = build_report(metrics)
     if fmt == "json":
         console.print_json(json.dumps(report_to_dict(rep), ensure_ascii=False))
-    else:
+    elif fmt == "md":
         # Дословно: rich перенёс бы длинные строки по ширине терминала и
-        # разрезал markdown-таблицу — `report > report.md` перестал бы
-        # быть валидным markdown на узком экране.
+        # разрезал markdown-таблицу — `report --format md > report.md`
+        # перестал бы быть валидным markdown на узком экране.
         click.echo(render_md(rep))
+    else:
+        console.print(render_table(rep))
 
 
 @cli.command()
 @click.option("--file", "path", type=click.Path(exists=True, dir_okay=False), required=True, help="call log (JSONL)")
 def monitor(path: str) -> None:
-    """Snapshot of hit rate by provider/model (see `tui` for the live dashboard)."""
+    """Cache hit rate by provider and model.
+
+    A snapshot; see `tui` for the live dashboard.
+    """
     metrics = list(iter_jsonl(path))
     if not metrics:
         raise click.ClickException("no usage records in the log")
@@ -66,7 +81,10 @@ def monitor(path: str) -> None:
 @click.option("--session", "session", default=None, help="filter by session_id")
 @click.option("--json", "as_json", is_flag=True, help="output as JSON")
 def diagnose(path: str, session: str | None, as_json: bool) -> None:
-    """What breaks the prefix cache inside sessions: findings + heatmap + fixes (advisory, D18)."""
+    """Find what breaks the prefix cache — and how to fix it.
+
+    Findings, prompt heatmap and assembly suggestions (advisory, D18).
+    """
     calls = [c for c in iter_calls(path) if session is None or c.metrics.session_id == session]
     sessions = group_by_session(calls)
     if as_json:
@@ -106,7 +124,7 @@ def diagnose(path: str, session: str | None, as_json: bool) -> None:
 
 @cli.command()
 def providers() -> None:
-    """Provider cache-semantics table (prices, TTL)."""
+    """Cache pricing and TTL, per provider."""
     table = Table(title="prefixcash — cache pricing (check `verified` against your own contract)")
     table.add_column("provider")
     table.add_column("model")
@@ -131,7 +149,7 @@ def providers() -> None:
 @cli.command()
 @click.option("--file", "path", type=click.Path(exists=True, dir_okay=False), required=True, help="call log (JSONL)")
 def tui(path: str) -> None:
-    """Interactive TUI: stats + prefix heatmap (j/k — sessions)."""
+    """Interactive prefix heatmap (j/k — switch sessions)."""
     from prefixcash.cli.tui import PrefixCashTui
 
     calls = list(iter_calls(path))
@@ -150,7 +168,7 @@ def tui(path: str) -> None:
 )
 @click.option("--out", "out", type=click.Path(dir_okay=False), default="prefixcash.jsonl", show_default=True)
 def import_cmd(path: str, out: str) -> None:
-    """Normalize a log into prefixcash JSONL."""
+    """Normalize any provider log into prefixcash JSONL."""
     count = 0
     with open(out, "w", encoding="utf-8") as fh:
         for m in iter_jsonl(path):
