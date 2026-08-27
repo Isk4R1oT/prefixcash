@@ -1,18 +1,18 @@
 # prefixcash benchmark — report cards
 
-Дата: 2026-08-25T20:17 · провайдер: DeepSeek (deepseek-chat) · 
-порог автоматического кеша: префикс ≥ ~1024 токенов (проверено отдельно).
+Date: 2026-08-27T19:43 · provider: DeepSeek (deepseek-chat) · 
+automatic-cache threshold: prefix ≥ ~1024 tokens (verified separately).
 
-| сценарий | диагноз (что ломает) | hit% baseline | hit% fixed | Δ | saved $ (выборка) | вердикт |
+| scenario | diagnosis | hit% baseline | hit% fixed | Δ | saved $ (sample) | verdict |
 |---|---:|---:|---:|---:|---:|---|
-| sales-timestamp | dynamic_iso_datetime | 65.2% | 86.9% | +21.8% | $0.0055 | ФИКС ЭФФЕКТИВЕН: hit rate 65% -> 87% (+22%), экономия на выборке $0 |
-| sales-uuid | dynamic_uuid | 65.7% | 98.3% | +32.7% | $0.0082 | ФИКС ЭФФЕКТИВЕН: hit rate 66% -> 98% (+33%), экономия на выборке $0 |
-| kb-reorder | content_change | 49.4% | 98.8% | +49.4% | $0.0082 | ФИКС ЭФФЕКТИВЕН: hit rate 49% -> 99% (+49%), экономия на выборке $0 |
-| short-prompt | — | 0.0% | 0.0% | +0.0% | $0.0000 | ФИКС НЕ ДАЁТ ВЫИГРЫША: hit rate 0% -> 0% (+0%) |
-| real-framework | dynamic_iso_datetime | 50.3% | 74.6% | +24.3% | $0.0027 | ФИКС ЭФФЕКТИВЕН: hit rate 50% -> 75% (+24%), экономия на выборке $0 |
+| sales-timestamp | dynamic_iso_datetime | 65.2% | 97.8% | +32.6% | $0.0082 | FIX WORKS |
+| sales-uuid | dynamic_uuid | 65.7% | 98.3% | +32.6% | $0.0082 | FIX WORKS |
+| kb-reorder | content_change | 49.4% | 98.7% | +49.3% | $0.0082 | FIX WORKS |
+| short-prompt | — | 0.0% | 0.0% | +0.0% | $0.0000 | NO GAIN |
+| real-framework | dynamic_iso_datetime | 50.3% | 99.0% | +48.6% | $0.0055 | FIX WORKS |
 
-Примечания:
-- Диагноз — результат офлайн-проверки диагностики (`benchmark/verify_diagnose.py`).
-- `short-prompt` — намеренный негативный кейс: кеш не включается на коротких промптах.
-- Экономия приведена на выборке бенчмарка; экстраполяция на прод — по вашей нагрузке.
-- Числа зависят от состояния кеша провайдера (TTL) и порядка прогонов (см. METHODOLOGY.md).
+Notes:
+- Diagnosis — offline diagnose verification (`benchmark/verify_diagnose.py`).
+- `short-prompt` — intentional negative case: cache does not engage on short prompts.
+- Savings are for the benchmark sample; extrapolate to production by your own load.
+- Numbers depend on provider cache state (TTL) and run order (see METHODOLOGY.md).
