@@ -40,7 +40,7 @@ _SUGGESTIONS: dict[str, str] = {
 def lint(heatmap: PromptHeatmap) -> list[AssemblySuggestion]:
     """Gives concrete prompt-assembly suggestions for cold positions."""
     out: list[AssemblySuggestion] = []
-    for pos in heatmap.cold_positions:
+    for pos in heatmap.changed_positions:
         cell = heatmap.cells[pos]
         kinds = classify(cell.word)
         if not kinds:

@@ -130,18 +130,22 @@ def _static_block(run_id: str) -> str:
     прогонов — иначе кеш провайдера остаётся тёплым с прошлого запуска и
     «сломанная» сессия тоже получает попадания (см. METHODOLOGY.md про
     зависимость от порядка прогонов).
+
+    Стоит ПЕРВОЙ строкой обоих вариантов: соль обязана попасть в префикс
+    до любой динамики, иначе холодный старт не гарантирован — хвост промпта
+    совпадёт с прогонами прошлого часа.
     """
-    return f"Build: {run_id}\n{POLICY}"
+    return f"## Build\nnimbus-support {run_id}"
 
 
 def broken_prompt(run_id: str, stamp: str) -> str:
-    """Динамика впереди: каждый вызов начинается с нового текста."""
-    return f"Current time: {stamp}.\n{_static_block(run_id)}"
+    """Динамика перед большим статическим блоком — префикс рвётся на времени."""
+    return f"{_static_block(run_id)}\nCurrent time: {stamp}.\n{POLICY}"
 
 
 def fixed_prompt(run_id: str, stamp: str) -> str:
     """Статика впереди, динамика в хвосте — префикс общий для всех вызовов."""
-    return f"{_static_block(run_id)}\n\n## Request context\nCurrent time: {stamp}."
+    return f"{_static_block(run_id)}\n{POLICY}\n\n## Request context\nCurrent time: {stamp}."
 
 
 def run_session(client: DeepSeekClient, session: str, build, run_id: str) -> list[dict]:

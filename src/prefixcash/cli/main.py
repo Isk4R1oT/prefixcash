@@ -80,7 +80,10 @@ def diagnose(path: str, session: str | None, as_json: bool) -> None:
         fs = analyze_session(sid, group)
         total += len(fs)
         hm = build_heatmap(sid, group)
-        console.print(f"[bold]{sid}[/bold] — {len(fs)} findings, prefix stability {hm.hot_ratio:.0%}")
+        noun = "finding" if len(fs) == 1 else "findings"
+        console.print(
+            f"[bold]{sid}[/bold] — {len(fs)} {noun}, cacheable prefix {hm.cached_ratio:.0%}"
+        )
         for f in fs:
             prev = f.prev_call_index if f.prev_call_index is not None else "?"
             console.print(f"  call {prev} -> {f.call_index}: shared prefix {f.shared_prefix_words} words")
@@ -91,7 +94,10 @@ def diagnose(path: str, session: str | None, as_json: bool) -> None:
             for v in f.fix_variants:
                 console.print(f"    → fix: {v}")
         if hm.cells:
-            console.print("  heatmap (color = prefix stability):")
+            console.print(
+                "  heatmap — [green]cached[/] · [bold red]breaks the cache[/] · "
+                "[dark_orange]lost after the break[/]:"
+            )
             console.print("  " + render_heatmap_markup(hm, limit=24))
             for s in lint(hm)[:4]:
                 console.print(f"    [red]{s.position}: {s.word}[/] — {s.suggestion}")

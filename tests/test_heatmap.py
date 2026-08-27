@@ -5,7 +5,7 @@ from datetime import UTC, datetime
 from prefixcash.core.metrics import CacheMetrics
 from prefixcash.diagnose.assembly import lint
 from prefixcash.diagnose.calls import CallRecord
-from prefixcash.diagnose.heatmap import COLD, HOT, build_heatmap, heatmap_text
+from prefixcash.diagnose.heatmap import BREAK, CACHED, LOST, build_heatmap, heatmap_text
 
 
 def _m(ts: datetime, cache_read: int = 0) -> CacheMetrics:
@@ -30,25 +30,32 @@ def _session():
     ]
 
 
-def test_heatmap_hot_and_cold_positions():
+def test_heatmap_marks_cached_break_and_lost():
     hm = build_heatmap("s1", _session())
     assert hm.cells
-    # первые слова стабильны (SYSTEM: Ты продавец. Время:)
-    assert all(c.kind == HOT for c in hm.cells[:4])
-    # позиция с временем — холодная
-    cold = [c for c in hm.cells if c.kind == COLD]
-    assert cold
-    assert any("09" in c.word for c in cold)
-    # разрывы зафиксированы на позиции времени
-    assert hm.breaks
-    assert hm.hot_ratio > 0.5
+    # префикс до времени реально кешируется
+    assert all(c.kind == CACHED for c in hm.cells[:4])
+    # позиция времени — виновник разрыва, ровно одна
+    breaks = [c for c in hm.cells if c.kind == BREAK]
+    assert len(breaks) == 1
+    assert "09" in breaks[0].word
+    # всё после разрыва потеряно, хотя текст там совпадает дословно
+    lost = [c for c in hm.cells if c.kind == LOST]
+    assert lost
+    assert all(c.stability == 1.0 for c in lost)
+    # пригодный префикс = ровно префикс до разрыва, а не доля совпавшего текста:
+    # здесь 6 из 7 слов совпадают дословно, но кешируются только 4.
+    assert hm.first_break == 4
+    assert hm.cached_ratio == 4 / len(hm.cells)
+    assert hm.cached_ratio < sum(c.stability for c in hm.cells) / len(hm.cells)
 
 
 def test_heatmap_text_marks():
     hm = build_heatmap("s1", _session())
     text = heatmap_text(hm)
-    assert "█" in text  # hot
-    assert "░" in text  # cold
+    assert "█" in text  # cached
+    assert "✖" in text  # break
+    assert "░" in text  # lost
 
 
 def test_lint_suggests_move_to_end():
@@ -63,4 +70,4 @@ def test_lint_suggests_move_to_end():
 def test_heatmap_empty_without_prompts():
     hm = build_heatmap("s1", [CallRecord(_m(datetime(2026, 8, 22, 9, 0, tzinfo=UTC)))])
     assert hm.cells == []
-    assert hm.hot_ratio == 0.0
+    assert hm.cached_ratio == 0.0
