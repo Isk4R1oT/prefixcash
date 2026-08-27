@@ -31,23 +31,34 @@ def _p(
     source: str,
     *,
     verified: bool = False,
-    updated: str = "2026-08-22",
+    updated: str = "2026-08-27",
 ) -> PriceEntry:
-    """Компактный конструктор PriceEntry (цены проверены 2026-08-22, см. METHODOLOGY.md)."""
+    """Компактный конструктор PriceEntry (даты проверки — в колонке updated)."""
     return PriceEntry(base, cached, ttl, updated, source, verified)
 
 
 # Ключ ("provider", "model"); "default" — фолбэк для неизвестных моделей провайдера.
 # verified=True — цена подтверждена источником; verified=False — оценка.
 PRICING: dict[tuple[str, str], PriceEntry] = {
-    ("openai", "gpt-4o"): _p(2.50, 1.25, "~1h", "tokenmix.ai (cached 50% off)", verified=True),
-    ("openai", "gpt-4o-mini"): _p(0.15, 0.075, "~1h", "openai.com/api/pricing", verified=True),
-    ("openai", "default"): _p(2.50, 1.25, "~1h", "fallback = gpt-4o-class"),
-    ("anthropic", "default"): _p(3.00, 0.30, "5min-1h", "dev.to/claudeguide (read = 0.1x)", verified=True),
-    ("deepseek", "deepseek-chat"): _p(0.74, 0.028, "hours", "apidog.com deepseek-v4 (96% off)", verified=True),
-    ("deepseek", "deepseek-reasoner"): _p(0.55, 0.14, "hours", "api-docs.deepseek.com (может быть вытеснен V4)"),
-    ("deepseek", "default"): _p(0.74, 0.028, "hours", "fallback = deepseek-chat (V4)"),
-    ("gemini", "default"): _p(0.75, 0.075, "5min (sliding)", "theneuralbase.com (90% off, Apr 2026)", verified=True),
+    # OpenAI: текущие модели дают cached input 0.1x базовой (раньше было 0.5x).
+    ("openai", "gpt-5.6-sol"): _p(4.00, 0.40, "~1h", "platform.openai.com/docs/pricing", verified=True),
+    ("openai", "gpt-5.6-cyber"): _p(12.50, 1.25, "~1h", "platform.openai.com/docs/pricing", verified=True),
+    ("openai", "gpt-4o"): _p(2.50, 1.25, "~1h", "legacy: cached = 0.5x", verified=True, updated="2026-08-22"),
+    ("openai", "default"): _p(4.00, 0.40, "~1h", "fallback = gpt-5.6-sol"),
+    ("anthropic", "default"): _p(3.00, 0.30, "5min-1h", "cache read = 0.1x базовой", verified=True),
+    # DeepSeek: указаны PEAK-ставки (off-peak ровно вдвое дешевле, 01:00-04:00
+    # и 06:00-10:00 UTC пн-пт — peak). Считаем по peak, чтобы не завышать экономию.
+    ("deepseek", "deepseek-v4-flash"): _p(
+        0.44, 0.014, "hours", "api-docs.deepseek.com (peak)", verified=True
+    ),
+    ("deepseek", "deepseek-v4-pro"): _p(
+        1.32, 0.044, "hours", "api-docs.deepseek.com (peak)", verified=True
+    ),
+    ("deepseek", "deepseek-chat"): _p(0.44, 0.014, "hours", "алиас -> deepseek-v4-flash", verified=True),
+    ("deepseek", "default"): _p(0.44, 0.014, "hours", "fallback = deepseek-v4-flash"),
+    ("gemini", "default"): _p(
+        0.75, 0.075, "5min (sliding)", "theneuralbase.com (90% off)", verified=True, updated="2026-08-22"
+    ),
 }
 
 

@@ -12,7 +12,7 @@ def test_cost_openai_saved():
 
 def test_lookup_fallback_to_default():
     assert lookup("openai", "unknown-model") is not None
-    assert lookup("deepseek", "some-model").base_input_per_mtok == 0.74
+    assert lookup("deepseek", "some-model").base_input_per_mtok == 0.44
 
 
 def test_lookup_openrouter_resolves_real_provider():
